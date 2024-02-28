@@ -23,7 +23,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
 #-------------------------------------------------------------------------------------------------------
 #   install-prereq.sh - 
 #   Installs Pre-Requisites for IBM WebSphere Automation installation
@@ -46,7 +45,7 @@
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
 #       --licensing-service-catalog-source $LICENSING_SERVICE_CATALOG_SOURCE - the catalog source name for IBM Licensing operator. Defaults to ibm-licensing-catalog.
-#       --case-version $CASE_VERSION - Case version of IBM Foundational Services to be installed. Defaults to 4.4.0.
+#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.4.0.
 #       --all-namespaces - only declare when you will be installing IBM WebSphere Automation Operator in AllNamespaces install mode.
 # 
 #   Usage:
@@ -55,7 +54,7 @@
 #                           [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
 #                           [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
 #                           [--licensing-service-catalog-source <LICENSING_SERVICE_CATALOG_SOURCE>]
-#                           [--case-version <CASE_VERSION>]
+#                           [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
 #                           [--all-namespaces]
 #  
 #-------------------------------------------------------------------------------------------------------
@@ -66,7 +65,7 @@ readonly usage="Usage: $0 --instance-namespace <WSA_INSTANCE_NAMESPACE>
                            [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
                            [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
                            [--licensing-service-catalog-source <LICENSING_SERVICE_CATALOG_SOURCE>]
-                           [--case-version <CASE_VERSION>]
+                           [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
                            [--all-namespaces]"
 
 set -o pipefail
@@ -94,9 +93,9 @@ parse_args() {
                 shift
                 readonly LICENSING_SERVICE_CATALOG_SOURCE="${1}"
                 ;;
-            --case-version)
+            --common-services-case-version)
                 shift
-                readonly CASE_VERSION="${1}"
+                readonly COMMON_SERVICES_CASE_VERSION="${1}"
                 ;;
             --all-namespaces)
                 readonly INSTALL_MODE="AllNamespaces"
@@ -119,6 +118,7 @@ create_namespace() {
         oc create namespace ${ns}
     fi
 }
+
 
 check_args() {    
     if [[ -z "${WSA_INSTANCE_NAMESPACE}" ]]; then
@@ -160,9 +160,9 @@ check_args() {
         LICENSING_SERVICE_CATALOG_SOURCE="ibm-licensing-catalog"
     fi
 
-    if [[ -z "${CASE_VERSION}" ]]; then
-        echo "==> Case version for Foundational Services not set. Setting as 4.4.0."
-        CASE_VERSION=4.4.0
+    if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
+        echo "==> Common Services case version is not set. Setting as 4.4.0."
+        COMMON_SERVICES_CASE_VERSION=4.4.0
     fi
 
     echo "***********************************************************************"
@@ -174,7 +174,7 @@ check_args() {
     echo "      Licensing Service namespace: ${LICENSING_SERVICE_NAMESPACE}"
     echo "      Cert Manager CatalogSource: ${CERT_MANAGER_CATALOG_SOURCE}"
     echo "      Licensing Service CatalogSource: ${LICENSING_SERVICE_CATALOG_SOURCE}"
-    echo "      Case Version for Founcational Services: ${CASE_VERSION}"
+    echo "      Common Services case version: ${COMMON_SERVICES_CASE_VERSION}"
     echo "***********************************************************************"
 }
 
@@ -187,8 +187,8 @@ main() {
     create_namespace ${CERT_MANAGER_NAMESPACE}
     create_namespace ${LICENSING_SERVICE_NAMESPACE}
 
-    wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${CASE_VERSION}/ibm-cp-common-services-${CASE_VERSION}.tgz
-    tar -xvzf ibm-cp-common-services-$CASE_VERSION.tgz
+    wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
+    tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
     cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
 
     echo "Installing required ingress network policies..."
@@ -220,7 +220,7 @@ main() {
 
     cd ../../../../
 
-    rm ibm-cp-common-services-$CASE_VERSION.tgz
+    rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
     rm -r ibm-cp-common-services
 
     echo "==> Pre-Requisites installation complete!"
