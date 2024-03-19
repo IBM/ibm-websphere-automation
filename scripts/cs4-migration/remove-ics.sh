@@ -287,12 +287,12 @@ if [[ "$cs_operator_name" != "$new_sub_name" ]]; then
 apiVersion: operator.ibm.com/v3
 kind: CommonService
 metadata:
-name: common-service
-namespace: $WSA_OPERATOR_NAMESPACE
+    name: common-service
+    namespace: $WSA_OPERATOR_NAMESPACE
 spec:
-operatorNamespace: $WSA_OPERATOR_NAMESPACE
-servicesNamespace: $WSA_OPERATOR_NAMESPACE
-size: starterset
+    operatorNamespace: $WSA_OPERATOR_NAMESPACE
+    servicesNamespace: $WSA_OPERATOR_NAMESPACE
+    size: starterset
 EOF
 
     # STEP 4: Upgrade Common Service and ODLM operator
