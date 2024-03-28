@@ -664,6 +664,7 @@ delete_network_policies() {
     oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-audit
     oc delete networkpolicy -n $WSA_OP_NS cs4x-iam-operator
     oc delete networkpolicy -n $WSA_OP_NS cs4x-iaf-system
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-events-operator
 }
 
 delete_ics() {
