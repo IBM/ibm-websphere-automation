@@ -731,3 +731,15 @@ check_catalog_source() {
         exit
     fi
 }
+
+# Implementation taken from https://github.com/IBM/cloud-pak/blob/master/repo/case/ibm-cp-common-services/4.4.0/ibm-cp-common-services-4.4.0.tgz
+check_yq_version() {
+  yq_version=$(yq --version | awk '{print $NF}' | sed 's/^v//')
+  yq_minimum_version=4.18.1
+
+  if [ "$(printf '%s\n' "$yq_minimum_version" "$yq_version" | sort -V | head -n1)" != "$yq_minimum_version" ]; then 
+    echo "==> Error: yq version $yq_version must be at least $yq_minimum_version or higher."
+    echo "  > Instructions for installing/upgrading yq are available here: https://github.com/marketplace/actions/yq-portable-yaml-processor"
+    exit
+  fi
+}

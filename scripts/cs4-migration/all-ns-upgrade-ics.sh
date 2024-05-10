@@ -282,6 +282,7 @@ if [[ ! $(which yq 2>/dev/null) ]]; then
   echo "You must install 'yq' before proceeding with the upgrade script. Exiting."
   exit 1
 fi
+check_yq_version
 parse_args "$@"
 check_args
 if [[ "$SKIP_CHECKS" == "false" ]]; then
