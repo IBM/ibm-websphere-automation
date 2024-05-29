@@ -140,9 +140,9 @@ scale_to_zero() {
     scaleToZero=$1
     WSA_IN_NS=$2
     if [[ "$scaleToZero" == "true" ]]; then
-        oc get websphereautomation -n $WSA_IN_NS -o name | cut -d '/' -f2 | xargs oc patch websphereautomation -n $WSA_IN_NS -p "{\"spec\":{\"scaleToZero\": $scaleToZero}}" --type=merge
+        oc get websphereautomation -n $WSA_IN_NS -o name | cut -d '/' -f2 | xargs oc patch websphereautomation -n $WSA_IN_NS -p "{\"spec\":{\"scaleToZero\": $scaleToZero}}" --type=merge || true
     else
-        oc get websphereautomation -n $WSA_IN_NS -o name | cut -d '/' -f2 | xargs oc patch websphereautomation -n $WSA_IN_NS -p "[{ \"op\": \"remove\", \"path\": \"/spec/scaleToZero\" }]" --type=json
+        oc get websphereautomation -n $WSA_IN_NS -o name | cut -d '/' -f2 | xargs oc patch websphereautomation -n $WSA_IN_NS -p "[{ \"op\": \"remove\", \"path\": \"/spec/scaleToZero\" }]" --type=json || true
     fi
 }
 
@@ -228,11 +228,11 @@ delete_operator() {
     operator_name=$1
     operator_ns=$2
     echo "==> Deleting operator $operator_name"
-    delete_csv $operator_name $operator_ns
+    delete_csv $operator_name $operator_ns || true
     if [[ "$operator_name" == "operand-deployment-lifecycle-manager" ]]; then
-        delete_subscription "operand-deployment-lifecycle-manager-app" $operator_ns
+        delete_subscription "operand-deployment-lifecycle-manager-app" $operator_ns || true
     else
-        delete_subscription $operator_name $operator_ns
+        delete_subscription $operator_name $operator_ns || true
     fi 
 }
 
@@ -247,7 +247,7 @@ delete_csv() {
     csv=$(get_csv_name "$1" $csv_ns)
     if [[ "$csv_count" == "1" ]]; then
         echo "    > Deleting ClusterServiceVersion..."
-        oc delete clusterserviceversion -n $csv_ns $csv
+        oc delete clusterserviceversion -n $csv_ns $csv || true
     elif [[ "$csv_count" == "0" ]]; then
         echo "    > ClusterServiceVersion not found."
     else
@@ -267,7 +267,7 @@ delete_subscription() {
     sub=$(get_subscription_name "$1" $subscription_ns)
     if [[ "$csv_count" == "1" ]]; then
         echo "    > Deleting Subscription..."
-        oc delete subscription -n $subscription_ns $sub
+        oc delete subscription -n $subscription_ns $sub || true
     elif [[ "$csv_count" == "0" ]]; then
         echo "    > Subscription not found."
     else
@@ -282,19 +282,19 @@ delete_resource() {
     instance_ns=$3
     if [[ "$instance_ns" != "" ]]; then
         echo "==> Deleting $resource_name '$instance_name' in namespace '$instance_ns'"
-        resource_count=$(oc get $resource_name -n $instance_ns -o name | grep "$instance_name" -c)
+        resource_count=$(oc get $resource_name -n $instance_ns -o name | grep "$instance_name" -c || echo "0")
         if [[ "$resource_count" == "1" ]]; then
             echo "    > Deleting $resource_name..."
-            oc delete $resource_name -n $instance_ns $instance_name
+            oc delete $resource_name -n $instance_ns $instance_name || true
         elif [[ "$resource_count" == "0" ]]; then
             echo "    > $resource_name not found."
         fi
     else
         echo "==> Deleting cluster-wide $resource_name '$instance_name'"
-        resource_count=$(oc get $resource_name -o name | grep "$instance_name" -c)
+        resource_count=$(oc get $resource_name -o name | grep "$instance_name" -c || echo "0")
         if [[ "$resource_count" == "1" ]]; then
             echo "    > Deleting cluster-wide $resource_name..."
-            oc delete $resource_name $instance_name
+            oc delete $resource_name $instance_name || true
         elif [[ "$resource_count" == "0" ]]; then
             echo "    > Cluster-wide $resource_name not found."
         fi
@@ -648,79 +648,79 @@ EOF
 
 delete_network_policies() {
     WSA_OP_NS=$1
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-network-policy-zen-minio
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-postgres
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-platform-auth-service
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-platform-identity-provider
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-platform-identity-management
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-icp-mongodb
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-egress-oidc-client-registration-egress
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-core-api
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-core
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-ibm-nginx
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-usermgmt
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-metastoredb
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-activity-record-manager
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-audit
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-iam-operator
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-iaf-system
-    oc delete networkpolicy -n $WSA_OP_NS cs4x-events-operator
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-network-policy-zen-minio || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-postgres || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-platform-auth-service || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-platform-identity-provider || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-platform-identity-management || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-ingress-icp-mongodb || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-egress-oidc-client-registration-egress || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-core-api || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-core || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-ibm-nginx || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-usermgmt || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-metastoredb || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-activity-record-manager || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-zen-audit || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-iam-operator || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-iaf-system || true
+    oc delete networkpolicy -n $WSA_OP_NS cs4x-events-operator || true
 }
 
 delete_ics() {
   CS_NS=$1
-  oc patch authentication.operator.ibm.com -n $CS_NS example-authentication -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete authentication.operator.ibm.com -n $CS_NS example-authentication #finalizer
-  oc delete pap.operator.ibm.com -n $CS_NS example-pap
-  oc delete policydecision.operator.ibm.com -n $CS_NS example-policydecision
-  oc patch commonwebuis.operators.ibm.com -n $CS_NS example-commonwebui -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete commonwebuis.operators.ibm.com -n $CS_NS example-commonwebui #finalizer
-  oc patch nginxingress.operator.ibm.com -n $CS_NS default -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete nginxingress.operator.ibm.com -n $CS_NS default #finalizer
+  oc patch authentication.operator.ibm.com -n $CS_NS example-authentication -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete authentication.operator.ibm.com -n $CS_NS example-authentication || true #finalizer
+  oc delete pap.operator.ibm.com -n $CS_NS example-pap || true
+  oc delete policydecision.operator.ibm.com -n $CS_NS example-policydecision || true
+  oc patch commonwebuis.operators.ibm.com -n $CS_NS example-commonwebui -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete commonwebuis.operators.ibm.com -n $CS_NS example-commonwebui || true #finalizer
+  oc patch nginxingress.operator.ibm.com -n $CS_NS default -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete nginxingress.operator.ibm.com -n $CS_NS default || true #finalizer
 
-  oc patch policycontroller.operator.ibm.com -n $CS_NS policycontroller-deployment -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete policycontroller.operator.ibm.com -n $CS_NS policycontroller-deployment #finalizer
+  oc patch policycontroller.operator.ibm.com -n $CS_NS policycontroller-deployment -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete policycontroller.operator.ibm.com -n $CS_NS policycontroller-deployment || true #finalizer
 
-  oc delete managementingress.operator.ibm.com -n $CS_NS default 
-  oc delete deployment -n $CS_NS meta-api-deploy
-  oc patch OIDCClientWatcher.operator.ibm.com -n $CS_NS example-oidcclientwatcher -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete OIDCClientWatcher.operator.ibm.com -n $CS_NS example-oidcclientwatcher #finalizer
+  oc delete managementingress.operator.ibm.com -n $CS_NS default || true
+  oc delete deployment -n $CS_NS meta-api-deploy || true
+  oc patch OIDCClientWatcher.operator.ibm.com -n $CS_NS example-oidcclientwatcher -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete OIDCClientWatcher.operator.ibm.com -n $CS_NS example-oidcclientwatcher || true #finalizer
 
-  oc patch PlatformAPI.operator.ibm.com -n $CS_NS platform-api -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete PlatformAPI.operator.ibm.com -n $CS_NS platform-api #finalizer
+  oc patch PlatformAPI.operator.ibm.com -n $CS_NS platform-api -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete PlatformAPI.operator.ibm.com -n $CS_NS platform-api || true #finalizer
 
-  oc delete SecretWatcher.operator.ibm.com -n $CS_NS secretwatcher-deployment
-  oc delete MongoDB.operator.ibm.com -n $CS_NS ibm-mongodb
-  oc delete job -n $CS_NS iam-onboarding 
-  oc delete job -n $CS_NS pre-zen-operand-config-job 
-  oc delete job -n $CS_NS security-onboarding 
-  oc delete job -n $CS_NS setup-job
+  oc delete SecretWatcher.operator.ibm.com -n $CS_NS secretwatcher-deployment || true
+  oc delete MongoDB.operator.ibm.com -n $CS_NS ibm-mongodb || true
+  oc delete job -n $CS_NS iam-onboarding || true
+  oc delete job -n $CS_NS pre-zen-operand-config-job || true
+  oc delete job -n $CS_NS security-onboarding || true
+  oc delete job -n $CS_NS setup-job || true
 
-  oc patch namespacescope.operator.ibm.com -n $CS_NS common-service -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete namespacescope.operator.ibm.com -n $CS_NS common-service #finalizer
+  oc patch namespacescope.operator.ibm.com -n $CS_NS common-service -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete namespacescope.operator.ibm.com -n $CS_NS common-service || true #finalizer
 
   # OperandBindInfo
-  oc patch operandbindinfos.operator.ibm.com -n $CS_NS ibm-iam-bindinfo -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandbindinfos.operator.ibm.com -n $CS_NS ibm-iam-bindinfo #finalizer
-  oc patch operandbindinfos.operator.ibm.com -n $CS_NS management-ingress -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandbindinfos.operator.ibm.com -n $CS_NS management-ingress #finalizer
+  oc patch operandbindinfos.operator.ibm.com -n $CS_NS ibm-iam-bindinfo -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandbindinfos.operator.ibm.com -n $CS_NS ibm-iam-bindinfo || true #finalizer
+  oc patch operandbindinfos.operator.ibm.com -n $CS_NS management-ingress -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandbindinfos.operator.ibm.com -n $CS_NS management-ingress || true #finalizer
 
   # OperandRequests
-  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-commonui-request -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-commonui-request #finalizer
+  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-commonui-request -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-commonui-request || true #finalizer
 
-  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-iam-request -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-iam-request #finalizer
-  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-mongodb-request -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-mongodb-request #finalizer
+  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-iam-request -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-iam-request || true #finalizer
+  oc patch operandrequests.operator.ibm.com -n $CS_NS ibm-mongodb-request -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandrequests.operator.ibm.com -n $CS_NS ibm-mongodb-request || true #finalizer
 
-  oc patch operandrequests.operator.ibm.com -n $CS_NS management-ingress -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandrequests.operator.ibm.com -n $CS_NS management-ingress #finalizer
+  oc patch operandrequests.operator.ibm.com -n $CS_NS management-ingress -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandrequests.operator.ibm.com -n $CS_NS management-ingress || true #finalizer
 
-  oc patch operandrequests.operator.ibm.com -n $CS_NS platform-api-request -p '{"metadata":{"finalizers":null}}' --type=merge
-  oc delete operandrequests.operator.ibm.com -n $CS_NS platform-api-request #finalizer
+  oc patch operandrequests.operator.ibm.com -n $CS_NS platform-api-request -p '{"metadata":{"finalizers":null}}' --type=merge || true
+  oc delete operandrequests.operator.ibm.com -n $CS_NS platform-api-request || true #finalizer
 
-  oc delete project $CS_NS
+  oc delete project $CS_NS || true
 }
 
 check_catalog_source() {

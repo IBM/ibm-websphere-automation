@@ -41,7 +41,7 @@
 #  
 #-------------------------------------------------------------------------------------------------------
 set -o nounset
-set -o pipefail
+set -eo pipefail
 CS_NS=$1
 
 wait_for_iam_ready() {
@@ -50,7 +50,7 @@ wait_for_iam_ready() {
     while true
     do
         echo "==> Waiting for authentication.operator.ibm.com 'example-authentication' in namespace '$NS' to become ready... ($retries retries left)"
-        ready_status=$(oc -n $NS get authentication.operator.ibm.com example-authentication -o json | yq -r '.status.service.status')
+        ready_status=$(oc -n $NS get authentication.operator.ibm.com example-authentication -o json | yq -r '.status.service.status' || echo "NotReady")
         [[ "$ready_status" == "Ready" ]] && break
         ((retries-=1))
         if (( retries < 0 )); then
@@ -86,7 +86,7 @@ access_token=$(curl \
 
 # Change name to cpadmin
 new_name="cpadmin"
-curl \
+status=$(curl \
 --location \
 --request PUT \
 --insecure \
@@ -94,22 +94,27 @@ curl \
 --header 'Accept: application/json' \
 --header "Authorization: Bearer ${access_token}" \
 -d "{\"username\": \"${new_name}\"}" \
-"https://${CP_CONSOLE}${IDMANAGER_INGRESS_PATH}users/defaultAdmin"
+"https://${CP_CONSOLE}${IDMANAGER_INGRESS_PATH}users/defaultAdmin" | yq '.status')
+if [[ "$status" != "success" ]]; then
+    echo "==> Failed to update username from admin to cpadmin"
+    echo "  > Re-run the script with the --skip-checks flag to retry the migration."
+    exit 1
+fi 
 
 # Restart platform pods to update user
 # Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.4?topic=configurations-changing-cluster-administrator-access-credentials
 platform_identity_provider_pod=$(oc -n $CS_NS get pods -o name | grep platform-identity-provider | cut -d "/" -f2)
 platform_auth_service_pod=$(oc -n $CS_NS get pods -o name | grep platform-auth-service | cut -d "/" -f2)
 
-oc -n $CS_NS delete pod $platform_identity_provider_pod
-oc -n $CS_NS delete pod $platform_auth_service_pod
+oc -n $CS_NS delete pod $platform_identity_provider_pod || true
+oc -n $CS_NS delete pod $platform_auth_service_pod || true
 
 echo "==> Changed user admin to cpadmin"
 
 # Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.4?topic=login-cannot-log-in-console-after-reinstallation-foundational-services
-oc -n $CS_NS delete job oidc-client-registration
+oc -n $CS_NS delete job oidc-client-registration || true
 
 common_web_pod=$(oc -n $CS_NS get pods -o name | grep common-web-ui | cut -d "/" -f2)
-oc -n $CS_NS delete pod $common_web_pod
+oc -n $CS_NS delete pod $common_web_pod || true
 
 echo "==> Restarted CommonWebUI"
