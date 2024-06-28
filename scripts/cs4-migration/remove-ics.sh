@@ -332,7 +332,7 @@ EOF
         oc delete validatingwebhookconfiguration ibm-cs-ns-mapping-webhook-configuration || true
         oc delete service platform-identity-management -n $COMMON_SERVICES_NAMESPACE || true
 
-        oc get namespacescope -n $COMMON_SERVICES_NAMESPACE -o name | grep -v common-service | xargs oc delete -n $COMMON_SERVICES_NAMESPACE
+        oc get namespacescope -n $COMMON_SERVICES_NAMESPACE -o name | grep -v common-service | xargs oc delete -n $COMMON_SERVICES_NAMESPACE || true
         oc delete mutatingwebhookconfiguration namespace-admission-config || true
         delete_operator "ibm-namespace-scope-operator" $COMMON_SERVICES_NAMESPACE
 
