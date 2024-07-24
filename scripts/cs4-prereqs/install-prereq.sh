@@ -41,7 +41,7 @@
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") will be created.
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION - the semantic version of WebSphere Automation operator (i.e. "1.7.3") that is targeted for installation.
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.7.3") that is targeted for installation.
 #       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator will be installed. Defaults to ibm-cert-manager.
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
@@ -52,7 +52,7 @@
 # 
 #   Usage:
 #       ./install-prereq.sh --instance-namespace <WSA_INSTANCE_NAMESPACE>
-#                           [--websphere-automation-version <WSA_VERSION>]
+#                           [--websphere-automation-version <WSA_VERSION_NUMBER>]
 #                           [--cert-manager-namespace <CERT_MANAGER_NAMESPACE>]
 #                           [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
 #                           [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
@@ -65,7 +65,7 @@
 
 
 readonly usage="Usage: $0 --instance-namespace <WSA_INSTANCE_NAMESPACE>
-                           [--websphere-automation-version <WSA_VERSION>]
+                           [--websphere-automation-version <WSA_VERSION_NUMBER>]
                            [--cert-manager-namespace <CERT_MANAGER_NAMESPACE>]
                            [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
                            [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
@@ -85,7 +85,7 @@ parse_args() {
                 ;;
             --websphere-automation-version)
                 shift
-                readonly WSA_VERSION="${1}"
+                readonly WSA_VERSION_NUMBER="${1}"
                 ;;
             --cert-manager-namespace)
                 shift
@@ -141,11 +141,11 @@ check_args() {
         exit 1
     fi
 
-    if [[ -z "${WSA_VERSION}" ]]; then
+    if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
         echo "==> WebSphere Automation version not set. Setting as 1.7.3."
-        WSA_VERSION="1.7.3"
+        WSA_VERSION_NUMBER="1.7.3"
     else
-        IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION}"
+        IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
             echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.7.3'."
             echo ""
@@ -199,7 +199,7 @@ check_args() {
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
         # Check operator versions that might require using older Common Services case versions
-        if [[ "${WSA_VERSION}" == "1.7.0" ]] || [[ "${WSA_VERSION}" == "1.7.1" ]] || [[ "${WSA_VERSION}" == "1.7.2" ]]; then
+        if [[ "${WSA_VERSION_NUMBER}" == "1.7.0" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.2" ]]; then
             COMMON_SERVICES_CASE_VERSION=4.4.0
         else
             # Otherwise, use the latest version
@@ -215,7 +215,7 @@ check_args() {
     echo "      Install mode: ${INSTALL_MODE}"
     echo "      WebSphere Automation operator namespace: ${WSA_OPERATOR_NAMESPACE}"
     echo "      WebSphere Automation instance namespace: ${WSA_INSTANCE_NAMESPACE}"
-    echo "      WebSphere Automation version: ${WSA_VERSION}"
+    echo "      WebSphere Automation version: ${WSA_VERSION_NUMBER}"
     echo "      Cert Manager namespace: ${CERT_MANAGER_NAMESPACE}"
     echo "      Licensing Service namespace: ${LICENSING_SERVICE_NAMESPACE}"
     echo "      Cert Manager CatalogSource: ${CERT_MANAGER_CATALOG_SOURCE}"
