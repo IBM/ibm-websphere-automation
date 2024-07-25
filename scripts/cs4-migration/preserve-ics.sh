@@ -57,10 +57,9 @@ readonly usage="Usage: $0 --operator-namespace <WSA_OPERATOR_NAMESPACE> --instan
                            [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
                            [--common-services-upgrade-channel <COMMON_SERVICES_UPGRADE_CHANNEL>]
                            [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
-                           [--skip-checks]"
+                           [--skip-checks]
+                           [--allow-errors]"
 readonly scriptName="$0"
-
-set -o pipefail
 
 . ./utils.sh
 
@@ -106,6 +105,9 @@ parse_args() {
             --skip-checks)
                 readonly SKIP_CHECKS="true"
                 ;;
+            --allow-errors)
+                readonly ALLOW_ERRORS="true"
+                ;;
             *)
                 echo "Error: Invalid argument - $1"
                 echo "$usage"
@@ -116,7 +118,12 @@ parse_args() {
     done
 }
 
-check_args() {    
+check_args() { 
+    if [[ "$ALLOW_ERRORS" == "true" ]]; then
+        set -o pipefail
+    else 
+        set -eo pipefail
+    fi    
     if [[ -z "${WSA_OPERATOR_NAMESPACE}" ]]; then
         echo "==> Error: Must set the WebSphere Automation Operator's namespace. Exiting."
         echo "${usage}"
@@ -238,39 +245,39 @@ echo "==> Starting IBM Cloud Pak foundational services upgrade..."
 # Find CS namespace
 COMMON_SERVICES_NAMESPACE=$(oc get operandrequest -n $WSA_INSTANCE_NAMESPACE websphereauto -o yaml | grep "registryNamespace: " | cut -d ":" -f2 | tr -d " ")
 if [[ "$COMMON_SERVICES_NAMESPACE" == "$WSA_OPERATOR_NAMESPACE" ]]; then
-  echo "The IBM Cloud Pak foundational services has already been upgraded! Exiting."
-  exit 1
-fi
-
-cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
-if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
-    # Delete WSA to get OLM dependency removed
-    delete_operator "ibm-websphere-automation" $WSA_OPERATOR_NAMESPACE
-
-    oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge
-
-    create_network_policies $WSA_INSTANCE_NAMESPACE "true"
-
-    oc new-project $CERT_MANAGER_NAMESPACE
-    oc new-project $LICENSING_SERVICE_NAMESPACE
-
-    wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
-    tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
-
-    # Apply CP3 network policies
-    cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
-    cd ./cp3-networkpolicy/
-    ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
-    cd ../
-
-    ./preload_data.sh --original-cs-ns $COMMON_SERVICES_NAMESPACE --services-ns $WSA_OPERATOR_NAMESPACE
-    ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1
-    ./cp3pt0-deployment/setup_tenant.sh --operator-namespace $WSA_OPERATOR_NAMESPACE --services-namespace $WSA_OPERATOR_NAMESPACE --tethered-namespace $WSA_OPERATOR_NAMESPACE --source $COMMON_SERVICES_CATALOG_SOURCE --license-accept
-    cd ../../../../
-    oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-events-operator\"},{\"name\": \"ibm-platformui-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
+    echo "The IBM Cloud Pak foundational services has already been upgraded so a new Subscription will not be applied."
 else
-    echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+    echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
+    cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
+    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
+        # Delete WSA to get OLM dependency removed
+        delete_operator "ibm-websphere-automation" $WSA_OPERATOR_NAMESPACE
+
+        oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge || true
+
+        create_network_policies $WSA_INSTANCE_NAMESPACE "true"
+
+        oc new-project $CERT_MANAGER_NAMESPACE || true
+        oc new-project $LICENSING_SERVICE_NAMESPACE || true
+
+        wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
+        tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
+
+        # Apply CP3 network policies
+        cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
+        cd ./cp3-networkpolicy/
+        ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
+        cd ../
+
+        ./preload_data.sh --original-cs-ns $COMMON_SERVICES_NAMESPACE --services-ns $WSA_OPERATOR_NAMESPACE
+        ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1
+        ./cp3pt0-deployment/setup_tenant.sh --operator-namespace $WSA_OPERATOR_NAMESPACE --services-namespace $WSA_OPERATOR_NAMESPACE --tethered-namespace $WSA_OPERATOR_NAMESPACE --source $COMMON_SERVICES_CATALOG_SOURCE --license-accept
+        cd ../../../../
+        oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-events-operator\"},{\"name\": \"ibm-platformui-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
+    else
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+    fi
 fi
 
 # # If this is an air-gapped install, delete the Zen operator in ibm-common-services
@@ -281,6 +288,11 @@ fi
 # Wait for ZenService to load to 5.*
 wait_for_zen_service $WSA_OPERATOR_NAMESPACE "$scriptName"
 
+# oc patch clients.oidc.security.ibm.com -n $WSA_INSTANCE_NAMESPACE zenclient-$WSA_INSTANCE_NAMESPACE -p '{"metadata":{"finalizers":null}}' --type=merge
+delete_resource "clients.oidc.security.ibm.com" "zenclient-$WSA_INSTANCE_NAMESPACE" $WSA_INSTANCE_NAMESPACE
+oc get job -n $WSA_INSTANCE_NAMESPACE iam-config-job -o json | yq 'del(.spec.selector)' | yq 'del(.spec.template.metadata.labels)' | oc replace -n $WSA_INSTANCE_NAMESPACE --force -f - 
+wait_for_iam_config_job $WSA_INSTANCE_NAMESPACE
+
 # Rename the cp-console user from "admin" to "cpadmin"
 ./update-cp-user.sh $WSA_OPERATOR_NAMESPACE
 
@@ -289,8 +301,8 @@ scale_to_zero "false" $WSA_INSTANCE_NAMESPACE
 
 delete_network_policies $WSA_INSTANCE_NAMESPACE
 
-rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
-rm -r ibm-cp-common-services
+rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz || true
+rm -r ibm-cp-common-services || true
 
 echo "==> The IBM Cloud Pak foundational services upgrade has completed!"
 echo "    Your OpenShift cluster is ready to install IBM WebSphere Automation Operator version >=1.7.0."
