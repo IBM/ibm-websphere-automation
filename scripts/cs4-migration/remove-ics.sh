@@ -53,10 +53,9 @@ readonly usage="Usage: $0 --operator-namespace <WSA_OPERATOR_NAMESPACE> --instan
                            [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
                            [--common-services-upgrade-channel <COMMON_SERVICES_UPGRADE_CHANNEL>]
                            [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
-                           [--skip-checks]"
+                           [--skip-checks]
+                           [--allow-errors]"
 readonly scriptName="$0"
-
-set -o pipefail
 
 . ./utils.sh
 
@@ -102,6 +101,9 @@ parse_args() {
             --skip-checks)
                 readonly SKIP_CHECKS="true"
                 ;;
+            --allow-errors)
+                readonly ALLOW_ERRORS="true"
+                ;;
             *)
                 echo "Error: Invalid argument - $1"
                 echo "$usage"
@@ -113,6 +115,11 @@ parse_args() {
 }
 
 check_args() {    
+    if [[ "$ALLOW_ERRORS" == "true" ]]; then
+        set -o pipefail
+    else 
+        set -eo pipefail
+    fi  
     if [[ -z "${WSA_OPERATOR_NAMESPACE}" ]]; then
         echo "==> Error: Must set the WebSphere Automation Operator's namespace. Exiting."
         echo "${usage}"
@@ -126,23 +133,23 @@ check_args() {
     fi
 
     if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
-        echo "==> Common Services upgrade channel not set. Setting as v4.4."
-        COMMON_SERVICES_UPGRADE_CHANNEL="v4.4"
+        echo "==> Common Services upgrade channel not set. Setting as v4.6."
+        COMMON_SERVICES_UPGRADE_CHANNEL="v4.6"
     else
       IFS='.' read -r -a channelArray <<< "$COMMON_SERVICES_UPGRADE_CHANNEL"
       if [[ ! $COMMON_SERVICES_UPGRADE_CHANNEL = v* ]] || [[ "${#channelArray[@]}" != "2" ]]; then
-        echo "==> Error: You must provide a channel in a format such as 'v4.4'."
+        echo "==> Error: You must provide a channel in a format such as 'v4.6'."
         exit
       fi 
     fi
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        echo "==> Common Services case version is not set. Setting as 4.4.0"
-        COMMON_SERVICES_CASE_VERSION="4.4.0"
+        echo "==> Common Services case version is not set. Setting as 4.6.3"
+        COMMON_SERVICES_CASE_VERSION="4.6.3"
     else
         IFS='.' read -r -a semVersionArray <<< "$COMMON_SERVICES_CASE_VERSION"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.4.0'."
+          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.6.3'."
           exit
         else
           commonServicesURL="https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz"
@@ -197,13 +204,13 @@ check_args() {
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
 
-# Step 1 of 4.4 in-place migration (https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.4?topic=4x-in-place-migration)
+# Step 1 of 4.6 in-place migration (https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.6?topic=4x-in-place-migration)
 scale_down_cs3() {
     cs_ns=$1
     # Scale down the ibm-common-service-operator Deployment in CS namespace
-    oc patch deployment -n $cs_ns ibm-common-service-operator -p "{\"spec\":{\"replicas\": 0}}" --type=merge
+    oc patch deployment -n $cs_ns ibm-common-service-operator -p "{\"spec\":{\"replicas\": 0}}" --type=merge || true
     # Scale down the ibm-common-service-operator Deployment in WSA namespace
-    oc patch deployment -n $WSA_INSTANCE_NAMESPACE ibm-common-service-operator -p "{\"spec\":{\"replicas\": 0}}" --type=merge
+    oc patch deployment -n $WSA_INSTANCE_NAMESPACE ibm-common-service-operator -p "{\"spec\":{\"replicas\": 0}}" --type=merge || true
 
     # Delete ODLM operator in CS namespace
     delete_operator "operand-deployment-lifecycle-manager" $cs_ns
@@ -248,43 +255,44 @@ echo "==> Starting IBM Cloud Pak foundational services upgrade..."
 
 COMMON_SERVICES_NAMESPACE=$(oc get operandrequest -n $WSA_INSTANCE_NAMESPACE websphereauto -o yaml | grep "registryNamespace: " | cut -d ":" -f2 | tr -d " ")
 if [[ "$COMMON_SERVICES_NAMESPACE" == "$WSA_OPERATOR_NAMESPACE" ]]; then
-  echo "The IBM Cloud Pak foundational services has already been upgraded! Exiting."
-  exit 1
-fi
-echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
+    echo "The IBM Cloud Pak foundational services has already been upgraded so a new Subscription will not be applied."
+else 
+    echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
 
-cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
-if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
-    wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
-    tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
+    cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
+    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
+        wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
+        tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
 
-    delete_operator "ibm-websphere-automation" $WSA_OPERATOR_NAMESPACE
+        delete_operator "ibm-websphere-automation" $WSA_OPERATOR_NAMESPACE
 
-    oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge
+        oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge || true
 
-    create_network_policies $WSA_INSTANCE_NAMESPACE "true"
+        create_network_policies $WSA_INSTANCE_NAMESPACE "true"
 
-    oc new-project $CERT_MANAGER_NAMESPACE
-    oc new-project $LICENSING_SERVICE_NAMESPACE
+        oc new-project $CERT_MANAGER_NAMESPACE || true
+        oc new-project $LICENSING_SERVICE_NAMESPACE || true
 
-    # Apply CP3 network policies
-    cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
-    cd ./cp3-networkpolicy/
-    ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
-    cd ../
+        # Apply CP3 network policies
+        cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
+        cd ./cp3-networkpolicy/
+        ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
+        cd ../
 
-    # Migrate data (i.e icp-mongodb) to WSA_OPERATOR_NAMESPACE
-    ./preload_data.sh --original-cs-ns $COMMON_SERVICES_NAMESPACE --services-ns $WSA_OPERATOR_NAMESPACE
+        # Migrate data (i.e icp-mongodb) to WSA_OPERATOR_NAMESPACE
+        ./preload_data.sh --original-cs-ns $COMMON_SERVICES_NAMESPACE --services-ns $WSA_OPERATOR_NAMESPACE
 
-    # Install CertManager and License Service
-    ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1
-    cd ../../../../
+        oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-commonui-operator\"},{\"name\": \"ibm-events-operator\"},{\"name\": \"ibm-zen-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$COMMON_SERVICES_NAMESPACE\"}]}]"
+        
+        # Install CertManager and License Service
+        ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1
+        cd ../../../../
 
-    # STEP 1: Take down utility operators
-    scale_down_cs3 $COMMON_SERVICES_NAMESPACE
+        # STEP 1: Take down utility operators
+        scale_down_cs3 $COMMON_SERVICES_NAMESPACE
 
-    oc apply -f - <<EOF
+        oc apply -f - <<EOF
 apiVersion: operator.ibm.com/v3
 kind: CommonService
 metadata:
@@ -296,51 +304,53 @@ spec:
     size: starterset
 EOF
 
-    # STEP 4: Upgrade Common Service and ODLM operator
-    delete_operator "ibm-common-service-operator" $COMMON_SERVICES_NAMESPACE 
-    delete_operator "ibm-cert-manager-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-commonui-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-events-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-iam-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-ingress-nginx-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-management-ingress-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-mongodb-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-platform-api-operator" $COMMON_SERVICES_NAMESPACE
-    delete_operator "ibm-zen-operator" $COMMON_SERVICES_NAMESPACE
+        # STEP 4: Upgrade Common Service and ODLM operator
+        delete_operator "ibm-common-service-operator" $COMMON_SERVICES_NAMESPACE 
+        delete_operator "ibm-cert-manager-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-commonui-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-events-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-iam-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-ingress-nginx-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-management-ingress-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-mongodb-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-platform-api-operator" $COMMON_SERVICES_NAMESPACE
+        delete_operator "ibm-zen-operator" $COMMON_SERVICES_NAMESPACE
 
-    cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
-    oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE
-    export new_COMMON_SERVICES_UPGRADE_CHANNEL="$COMMON_SERVICES_UPGRADE_CHANNEL"
-    export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
-    oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_UPGRADE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
+        cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
+        oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE
+        export new_COMMON_SERVICES_UPGRADE_CHANNEL="$COMMON_SERVICES_UPGRADE_CHANNEL"
+        export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
+        oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_UPGRADE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
 
-    # STEP 5: Clean up foundational services version 3.x resources
-    oc delete deployment secretshare -n $COMMON_SERVICES_NAMESPACE
-    oc delete secretshare common-services -n $COMMON_SERVICES_NAMESPACE
-    oc delete secretshare ibm-cpp-config -n $COMMON_SERVICES_NAMESPACE
+        # STEP 5: Clean up foundational services version 3.x resources
+        oc delete deployment secretshare -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete secretshare common-services -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete secretshare ibm-cpp-config -n $COMMON_SERVICES_NAMESPACE || true
 
-    oc delete podpreset ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE
-    oc delete deployment ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE
-    oc delete service ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE
-    oc delete mutatingwebhookconfiguration ibm-operandrequest-webhook-configuration
-    oc delete validatingwebhookconfiguration ibm-cs-ns-mapping-webhook-configuration 
-    oc delete service platform-identity-management -n $COMMON_SERVICES_NAMESPACE
+        oc delete podpreset ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete deployment ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete service ibm-common-service-webhook -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete mutatingwebhookconfiguration ibm-operandrequest-webhook-configuration || true
+        oc delete validatingwebhookconfiguration ibm-cs-ns-mapping-webhook-configuration || true
+        oc delete service platform-identity-management -n $COMMON_SERVICES_NAMESPACE || true
 
-    oc get namespacescope -n $COMMON_SERVICES_NAMESPACE -o name | grep -v common-service | xargs oc delete -n $COMMON_SERVICES_NAMESPACE
-    oc delete mutatingwebhookconfiguration namespace-admission-config
-    delete_operator "ibm-namespace-scope-operator" $COMMON_SERVICES_NAMESPACE
+        oc get namespacescope -n $COMMON_SERVICES_NAMESPACE -o name | grep -v common-service | xargs oc delete -n $COMMON_SERVICES_NAMESPACE || true
+        oc delete mutatingwebhookconfiguration namespace-admission-config || true
+        delete_operator "ibm-namespace-scope-operator" $COMMON_SERVICES_NAMESPACE
 
-    # STEP 6: Upgrade Namespace Scope Operator - Can skip because WSA is in the same namespace as foundational services
-    # STEP 7: After completing the preceding manual steps, the existing IM works as is, until CloudPaks are upgraded and stop creating OperandRequests for ibm-iam-operator and ibm-zen-operator.
-    oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-platformui-operator\"},{\"name\": \"ibm-events-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
-else
-    echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+        # STEP 6: Upgrade Namespace Scope Operator - Can skip because WSA is in the same namespace as foundational services
+        # STEP 7: After completing the preceding manual steps, the existing IM works as is, until CloudPaks are upgraded and stop creating OperandRequests for ibm-iam-operator and ibm-zen-operator.
+        oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-platformui-operator\"},{\"name\": \"ibm-events-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
+    else
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+    fi
 fi
 
 # Wait for ZenService to load to 5.*
 wait_for_zen_service $WSA_OPERATOR_NAMESPACE "$scriptName"
 
-delete_resource "clients.oidc.security.ibm.com" "zenclient-$WSA_INSTANCE_NAMESPACE" $WSA_INSTANCE_NAMESPACE
+# oc patch clients.oidc.security.ibm.com -n $WSA_INSTANCE_NAMESPACE zenclient-$WSA_INSTANCE_NAMESPACE -p '{"metadata":{"finalizers":null}}' --type=merge
+# delete_resource "clients.oidc.security.ibm.com" "zenclient-$WSA_INSTANCE_NAMESPACE" $WSA_INSTANCE_NAMESPACE
 oc get job -n $WSA_INSTANCE_NAMESPACE iam-config-job -o json | yq 'del(.spec.selector)' | yq 'del(.spec.template.metadata.labels)' | oc replace -n $WSA_INSTANCE_NAMESPACE --force -f - 
 wait_for_iam_config_job $WSA_INSTANCE_NAMESPACE
 
@@ -348,7 +358,11 @@ wait_for_iam_config_job $WSA_INSTANCE_NAMESPACE
 ./update-cp-user.sh $WSA_OPERATOR_NAMESPACE
 
 # Tear down IBM Common Services namespace
-delete_ics $COMMON_SERVICES_NAMESPACE
+if [[ "$COMMON_SERVICES_NAMESPACE" == "$WSA_OPERATOR_NAMESPACE" ]]; then
+    delete_ics "ibm-common-services"
+else
+    delete_ics $COMMON_SERVICES_NAMESPACE
+fi
 
 # Restore WSA, WSS, WSH replicas
 scale_to_zero "false" $WSA_INSTANCE_NAMESPACE
@@ -357,8 +371,8 @@ scale_to_zero "false" $WSA_INSTANCE_NAMESPACE
 delete_network_policies $WSA_INSTANCE_NAMESPACE 
 
 # Remove install script resources
-rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
-rm -r ibm-cp-common-services
+rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz || true
+rm -r ibm-cp-common-services || true
 
 echo "==> The IBM Cloud Pak foundational services upgrade has completed!"
 echo "    Your OpenShift cluster is ready to install IBM WebSphere Automation Operator version >=1.7.0."

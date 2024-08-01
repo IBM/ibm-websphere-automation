@@ -1,28 +1,4 @@
 #!/bin/bash
-
-#
-# IBM Confidential
-# OCO Source Materials
-# 5900-AH1
-#
-# (C) Copyright IBM Corp. 2024
-#
-
-#
-# The source code for this program is not published or otherwise
-# divested of its trade secrets, irrespective of what has been
-# deposited with the U.S. Copyright Office.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
 #-------------------------------------------------------------------------------------------------------
 # all-ns-upgrade-ics.sh - 
 # Upgrades IBM Cloud Pak foundational services 3.x for the entire cluster. 
@@ -55,10 +31,9 @@ readonly usage="Usage: $0 --operator-namespace <WSA_OPERATOR_NAMESPACE> --instan
                            [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
                            [--common-services-upgrade-channel <COMMON_SERVICES_UPGRADE_CHANNEL>]
                            [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
-                           [--skip-checks]"
+                           [--skip-checks]
+                           [--allow-errors]"
 readonly scriptName="$0"
-
-set -o pipefail
 
 . ./utils.sh
 
@@ -104,6 +79,9 @@ parse_args() {
             --skip-checks)
                 readonly SKIP_CHECKS="true"
                 ;;
+            --allow-errors)
+                readonly ALLOW_ERRORS="true"
+                ;;
             *)
                 echo "Error: Invalid argument - $1"
                 echo "$usage"
@@ -114,7 +92,12 @@ parse_args() {
     done
 }
 
-check_args() {    
+check_args() {
+    if [[ "$ALLOW_ERRORS" == "true" ]]; then
+        set -o pipefail
+    else 
+        set -eo pipefail
+    fi
     if [[ -z "${WSA_OPERATOR_NAMESPACE}" ]]; then
         echo "==> Error: Must set the WebSphere Automation Operator's namespace. Exiting."
         echo "${usage}"
@@ -128,23 +111,23 @@ check_args() {
     fi
 
     if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
-        echo "==> Common Services upgrade channel not set. Setting as v4.4."
-        COMMON_SERVICES_UPGRADE_CHANNEL="v4.4"
+        echo "==> Common Services upgrade channel not set. Setting as v4.6."
+        COMMON_SERVICES_UPGRADE_CHANNEL="v4.6"
     else
       IFS='.' read -r -a channelArray <<< "$COMMON_SERVICES_UPGRADE_CHANNEL"
       if [[ ! $COMMON_SERVICES_UPGRADE_CHANNEL = v* ]] || [[ "${#channelArray[@]}" != "2" ]]; then
-        echo "==> Error: You must provide a channel in a format such as 'v4.4'."
+        echo "==> Error: You must provide a channel in a format such as 'v4.6'."
         exit
       fi 
     fi
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        echo "==> Common Services case version is not set. Setting as 4.4.0"
-        COMMON_SERVICES_CASE_VERSION="4.4.0"
+        echo "==> Common Services case version is not set. Setting as 4.6.3"
+        COMMON_SERVICES_CASE_VERSION="4.6.3"
     else
         IFS='.' read -r -a semVersionArray <<< "$COMMON_SERVICES_CASE_VERSION"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.4.0'."
+          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.6.3'."
           exit
         else
           commonServicesURL="https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz"
@@ -210,7 +193,7 @@ wait_for_common_services_restart() {
     while true
     do
         echo "==> Waiting for CommonServices to restart..."
-        common_services_restarted=$(oc get pod -o name -n $WSA_OPERATOR_NAMESPACE | grep "ibm-common-service-operator-" -c)
+        common_services_restarted=$(oc get pod -o name -n $WSA_OPERATOR_NAMESPACE | { grep "ibm-common-service-operator-" -c || true; })
         [[ "$common_services_restarted" -eq "$state" ]] && break
         ((retries-=1))
         if (( retries < 0 )); then
@@ -230,7 +213,7 @@ wait_for_odlm_restart() {
     while true
     do
         echo "==> Waiting for ODLM to restart..."
-        odlm_restarted=$(oc get pod -o name -n $WSA_OPERATOR_NAMESPACE | grep "operand-deployment-lifecycle-manager-" -c)
+        odlm_restarted=$(oc get pod -o name -n $WSA_OPERATOR_NAMESPACE | { grep "operand-deployment-lifecycle-manager-" -c || true; })
         [[ "$odlm_restarted" -eq "$state" ]] && break
         ((retries-=1))
         if (( retries < 0 )); then
@@ -309,48 +292,48 @@ echo "==> Starting IBM Cloud Pak foundational services upgrade..."
 
 COMMON_SERVICES_NAMESPACE=$(oc get operandrequest -n $WSA_INSTANCE_NAMESPACE websphereauto -o yaml | grep "registryNamespace: " | cut -d ":" -f2 | tr -d " ")
 if [[ "$COMMON_SERVICES_NAMESPACE" == "$WSA_OPERATOR_NAMESPACE" ]]; then
-  echo "The IBM Cloud Pak foundational services has already been upgraded! Exiting."
-  exit 1
-fi
-echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
-
-cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
-if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
-    oc scale deployment ibm-common-service-operator -n $WSA_OPERATOR_NAMESPACE --replicas=0
-    wait_for_common_services_restart "0"
-    oc delete operandregistry common-service -n $COMMON_SERVICES_NAMESPACE
-
-    # Delete WSA to get OLM dependency removed
-    delete_operator "websphere-automation" $WSA_OPERATOR_NAMESPACE
-
-    oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge
-
-    create_network_policies $WSA_INSTANCE_NAMESPACE "false"
-
-    wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
-    tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
-
-    oc new-project $CERT_MANAGER_NAMESPACE
-    oc new-project $LICENSING_SERVICE_NAMESPACE
-
-    # Apply CP3 network policies
-    cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
-    cd ./cp3-networkpolicy/
-    ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
-    cd ../
-
-    ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1 
-    cd ../../../../
-
-    cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
-    oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE
-    
-    export new_COMMON_SERVICES_UPGRADE_CHANNEL="$COMMON_SERVICES_UPGRADE_CHANNEL"
-    export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
-    oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_UPGRADE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
+    echo "The IBM Cloud Pak foundational services has already been upgraded so a new Subscription will not be applied."
 else
-    echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+    echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
+
+    cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
+    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
+        oc scale deployment ibm-common-service-operator -n $WSA_OPERATOR_NAMESPACE --replicas=0
+        wait_for_common_services_restart "0"
+        oc delete operandregistry common-service -n $COMMON_SERVICES_NAMESPACE || true
+
+        # Delete WSA to get OLM dependency removed
+        delete_operator "websphere-automation" $WSA_OPERATOR_NAMESPACE
+
+        oc get webspheresecure -o name -n $WSA_INSTANCE_NAMESPACE | xargs oc patch --subresource=status -n $WSA_INSTANCE_NAMESPACE -p '{"status":{"references":{"translationChecksumUI":null}}}' --type=merge || true
+
+        create_network_policies $WSA_INSTANCE_NAMESPACE "false"
+
+        wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
+        tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
+
+        oc new-project $CERT_MANAGER_NAMESPACE || true
+        oc new-project $LICENSING_SERVICE_NAMESPACE || true
+
+        # Apply CP3 network policies
+        cd ibm-cp-common-services/inventory/ibmCommonServiceOperatorSetup/installer_scripts/
+        cd ./cp3-networkpolicy/
+        ./install_networkpolicy.sh -n $WSA_INSTANCE_NAMESPACE -o $WSA_OPERATOR_NAMESPACE --licensing-namespace $LICENSING_SERVICE_NAMESPACE --cert-manager-namespace $CERT_MANAGER_NAMESPACE
+        cd ../
+
+        ./cp3pt0-deployment/setup_singleton.sh --operator-namespace $COMMON_SERVICES_NAMESPACE --enable-licensing --cert-manager-source $CERT_MANAGER_CATALOG_SOURCE --licensing-source $LICENSING_SERVICE_CATALOG_SOURCE --license-accept -v 1 
+        cd ../../../../
+
+        cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
+        oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE || true
+        
+        export new_COMMON_SERVICES_UPGRADE_CHANNEL="$COMMON_SERVICES_UPGRADE_CHANNEL"
+        export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
+        oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_UPGRADE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
+    else
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+    fi
 fi
 
 wait_for_common_services_restart "1"
@@ -381,8 +364,8 @@ scale_to_zero "false" $WSA_INSTANCE_NAMESPACE
 # Remove network policies that were required for migration
 delete_network_policies $WSA_INSTANCE_NAMESPACE 
 
-rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
-rm -r ibm-cp-common-services
+rm ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz || true
+rm -r ibm-cp-common-services || true
 
 echo "==> The IBM Cloud Pak foundational services upgrade has completed!"
 echo "    Your OpenShift cluster is ready to install IBM WebSphere Automation Operator version >=1.7.0."
