@@ -32,7 +32,7 @@
 #-------------------------------------------------------------------------------------------------------
 #
 #  This script upgrades IBM Cloud Pak foundational services 3.x to 4.x in AllNamespaces.
-#  It prepares the cluster for installing version 1.7.0 of WebSphere Automation operator in AllNamespaces mode.
+#  It prepares the cluster for installing version 1.7.x of WebSphere Automation operator in AllNamespaces mode.
 #  You must install the WebSphere Automation operator in the 'openshift-operators' namespace after running this script.
 #  NOTE: This script causes a downtime for any other CloudPaks also consuming IBM Cloud Pak foundational services 
 # 

@@ -29,7 +29,7 @@
 #-------------------------------------------------------------------------------------------------------
 #
 #  This script removes IBM Cloud Pak foundational services 3.x.
-#  It prepares the cluster for installing version 1.7.0 of WebSphere Automation operator in OwnNamespace mode.
+#  It prepares the cluster for installing version 1.7.x of WebSphere Automation operator in OwnNamespace mode.
 #  You must install the WebSphere Automation operator inside of WSA_OPERATOR_NAMESPACE after running this script.
 #  NOTE: This script DELETES/REMOVES the prior IBM Cloud Pak foundational services 3.x installation and affects all
 #  CloudPaks that might be consuming CommonServices, by default, in the 'ibm-common-services' namespace.
@@ -190,6 +190,11 @@ check_args() {
         check_catalog_source "$CERT_MANAGER_CATALOG_SOURCE"
         check_catalog_source "ibm-license-service-reporter-bundle-catalog"
         check_catalog_source "cloud-native-postgresql-catalog"
+    fi
+
+    if [[ -z "${SKIP_CHECKS}" ]]; then
+        echo "==> Skip Checks flag not set. Setting as false."
+        SKIP_CHECKS="false"
     fi
 
     echo "==> WebSphere Automation operator namespace is set to: $WSA_OPERATOR_NAMESPACE"

@@ -35,7 +35,7 @@
 #-------------------------------------------------------------------------------------------------------
 #
 #  This script preserves IBM Cloud Pak foundational services 3.x.
-#  It prepares the cluster for installing version 1.7.0 of WebSphere Automation operator in OwnNamespace mode.
+#  It prepares the cluster for installing version 1.7.x of WebSphere Automation operator in OwnNamespace mode.
 #  You must install the WebSphere Automation operator inside of WSA_OPERATOR_NAMESPACE after running this script.
 #
 #  This script contains the following optional parameters:
@@ -141,7 +141,7 @@ check_args() {
         exit 1
     fi
 
-    if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
+    if [[ -z "${COMMON_SERVICES_CONTROL_NAMESPACE}" ]]; then
         echo "==> Common Services control namespace not set. Setting as cs-control."
         COMMON_SERVICES_CONTROL_NAMESPACE="cs-control"
     fi
