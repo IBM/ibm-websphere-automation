@@ -41,13 +41,13 @@
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") will be created.
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.7.3") that is targeted for installation.
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.7.4") that is targeted for installation.
 #       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator will be installed. Defaults to ibm-cert-manager.
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
 #       --licensing-service-catalog-source $LICENSING_SERVICE_CATALOG_SOURCE - the catalog source name for IBM Licensing operator. Defaults to ibm-licensing-catalog.
 #       --common-services-catalog-source $COMMON_SERVICES_CATALOG_SOURCE - the catalog source name for IBM Cloud Pak foundational services (Common Services). Defaults to ibm-operator-catalog.
-#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.6.3.
+#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.8.0.
 #       --all-namespaces - only declare when you will be installing IBM WebSphere Automation Operator in AllNamespaces install mode.
 # 
 #   Usage:
@@ -142,12 +142,12 @@ check_args() {
     fi
 
     if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.7.3."
-        WSA_VERSION_NUMBER="1.7.3"
+        echo "==> WebSphere Automation version not set. Setting as 1.7.4."
+        WSA_VERSION_NUMBER="1.7.4"
     else
         IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.7.3'."
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.7.4'."
             echo ""
             echo "${usage}"
             exit 1
@@ -201,9 +201,11 @@ check_args() {
         # Check operator versions that might require using older Common Services case versions
         if [[ "${WSA_VERSION_NUMBER}" == "1.7.0" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.2" ]]; then
             COMMON_SERVICES_CASE_VERSION=4.4.0
+        elif [[ "${WSA_VERSION_NUMBER}" == "1.7.3" ]]; then
+            COMMON_SERVICES_CASE_VERSION=4.6.4
         else
             # Otherwise, use the latest version
-            COMMON_SERVICES_CASE_VERSION=4.6.3
+            COMMON_SERVICES_CASE_VERSION=4.8.0
         fi
         echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     fi
@@ -227,9 +229,10 @@ check_args() {
 
 wait_for_condition() {
     local condition=$1
-    local expected_result=$2
-    local wait_message=$3
-    local error_message=$4
+    local target=$2
+    local comp_operator=$3
+    local wait_message=$4
+    local error_message=$5
 
     local total_retries=30
     local retries=1
@@ -238,7 +241,14 @@ wait_for_condition() {
         echo "==> ${wait_message} (retry ${retries}/${total_retries})"
         result=$(eval "${condition}")
 
-        [[ "$result" -eq "$expected_result" ]] && break
+        if [[ $comp_operator == "eq" ]]; then
+            [[ $(($result)) -eq $(($target)) ]] && break
+        elif [[ $comp_operator == "ge" ]]; then
+            [[ $(($result)) -ge $(($target)) ]] && break
+        else
+            echo "==> Error: Condition check failed. Exiting."
+            exit 1
+        fi
 
         ((retries+=1))
         if (( retries >= total_retries )); then
@@ -253,22 +263,24 @@ check_catalog_source() {
     local cs_name="$1"
 
     local condition="oc get catalogsource -n openshift-marketplace -o name | grep ${cs_name} -c"
-    local expected_result="1"
+    local target="1"
+    local comp_operator="eq"
     local wait_message="Waiting for CatalogSource '${cs_name}' to be present..."
     local error_message="The CatalogSource '${cs_name}' does not exist."
 
-    wait_for_condition "${condition}" "${expected_result}" "${wait_message}" "${error_message}"
+    wait_for_condition "${condition}" "${target}" "${comp_operator}" "${wait_message}" "${error_message}"
 }
 
 check_package_manifest() {
     local pm_name="$1"
 
     local condition="oc get packagemanifest -o name | grep "${pm_name}" -c"
-    local expected_result="1"
+    local target="1"
+    local comp_operator="ge"
     local wait_message="Waiting for PackageManifest '${pm_name}' to be present..."
     local error_message="The PackageManifest '${pm_name}' does not exist."
 
-    wait_for_condition "${condition}" "${expected_result}" "${wait_message}" "${error_message}"
+    wait_for_condition "${condition}" "${target}" "${comp_operator}" "${wait_message}" "${error_message}"
 }
 
 check_for_sub() {
@@ -305,11 +317,12 @@ wait_for_csv() {
     local namespace=$3
 
     local condition="oc get subscription.operators.coreos.com -l operators.coreos.com/${pm_name}.${namespace}='' -n ${namespace} -o yaml -o jsonpath='{.items[*].status.installedCSV}' | grep ${sub_name} -c"
-    local expected_result="1"
+    local target="1"
+    local comp_operator="eq"
     local wait_message="Waiting for ClusterServiceVersion for '${pm_name}' to be present..."
     local error_message="The ClusterServiceVersion for '${pm_name}' does not exist."
 
-    wait_for_condition "${condition}" "${expected_result}" "${wait_message}" "${error_message}"
+    wait_for_condition "${condition}" "${target}" "${comp_operator}" "${wait_message}" "${error_message}"
 }
 
 wait_for_operator() {
@@ -317,11 +330,12 @@ wait_for_operator() {
     local namespace=$2
 
     local condition="oc -n ${namespace} get csv --no-headers --ignore-not-found | egrep 'Succeeded' | grep ^${operator_name} -c"
-    local expected_result="1"
+    local target="1"
+    local comp_operator="eq"
     local wait_message="Waiting for operator ${operator_name} to be present..."
     local error_message="The operator ${operator_name} does not exist."
 
-    wait_for_condition "${condition}" "${expected_result}" "${wait_message}" "${error_message}"
+    wait_for_condition "${condition}" "${target}" "${comp_operator}" "${wait_message}" "${error_message}"
 }
 
 main() {
