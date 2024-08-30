@@ -101,7 +101,7 @@ if [[ "$status" != "success" ]]; then
 fi
 
 # Restart platform pods to update user
-# Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.6?topic=configurations-changing-cluster-administrator-access-credentials
+# Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.8?topic=configurations-changing-cluster-administrator-access-credentials
 platform_identity_provider_pod=$(oc -n $CS_NS get pods -o name | grep platform-identity-provider | cut -d "/" -f2)
 platform_auth_service_pod=$(oc -n $CS_NS get pods -o name | grep platform-auth-service | cut -d "/" -f2)
 
@@ -110,7 +110,7 @@ oc -n $CS_NS delete pod $platform_auth_service_pod || true
 
 echo "==> Changed user admin to cpadmin"
 
-# Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.6?topic=login-cannot-log-in-console-after-reinstallation-foundational-services
+# Follow https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.8?topic=login-cannot-log-in-console-after-reinstallation-foundational-services
 oc -n $CS_NS delete job oidc-client-registration || true
 
 common_web_pod=$(oc -n $CS_NS get pods -o name | grep common-web-ui | cut -d "/" -f2)
