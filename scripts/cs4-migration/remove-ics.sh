@@ -34,24 +34,42 @@
 #  NOTE: This script DELETES/REMOVES the prior IBM Cloud Pak foundational services 3.x installation and affects all
 #  CloudPaks that might be consuming CommonServices, by default, in the 'ibm-common-services' namespace.
 #
-#  This script contains the following optional parameters:
+#  This script contains the following parameters:
 #  
-#    Optional parameters:
-#      $1 (WSA_OPERATOR_NAMESPACE) - the namespace containing the IBM WebSphere Automation Operator install
-#      $2 (WSA_INSTANCE_NAMESPACE) - the namespace containing the "WebSphereAutomation" custom resource instance
+#   Required parameters:
+#       --operator-namespace $WSA_OPERATOR_NAMESPACE - the namespace where the WebSphere Automation operator is running.
+#       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") will be created.
+#   Optional parameters:
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.7.4") that is targeted for migration onto.
+#       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator will be installed. Defaults to ibm-cert-manager.
+#       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
+#       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
+#       --licensing-service-catalog-source $LICENSING_SERVICE_CATALOG_SOURCE - the catalog source name for IBM Licensing operator. Defaults to ibm-licensing-catalog.
+#       --common-services-catalog-source $COMMON_SERVICES_CATALOG_SOURCE - the catalog source name for IBM Cloud Pak foundational services (Common Services). Defaults to ibm-operator-catalog.
+#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.6.3.
+#       --skip-checks - skips strict checks for WebSphere Automation CR instance to be in a Ready state as well as on version 1.6.4 of the operator with IBM Cloud Pak foundational services running at version >=3.23.12
+#       --allow-errors - prevents the script from exiting when a non-zero exit code occurs
+#
+#   Usage:
+#       ./remove-ics.sh --operator-namespace <WSA_OPERATOR_NAMESPACE> --instance-namespace <WSA_INSTANCE_NAMESPACE>
+#                           [--websphere-automation-version <WSA_VERSION_NUMBER>]
+#                           [--cert-manager-namespace <CERT_MANAGER_NAMESPACE>]
+#                           [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
+#                           [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
+#                           [--licensing-service-catalog-source <LICENSING_SERVICE_CATALOG_SOURCE>]
+#                           [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
+#                           [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
+#                           [--skip-checks]
+#                           [--allow-errors]
 # 
-#  Usage:
-#    1. arguments - ./remove-ics.sh <WSA_OPERATOR_NAMESPACE> <WSA_INSTANCE_NAMESPACE>
-#    2. stdin     - ./remove-ics.sh
-#  
 #-------------------------------------------------------------------------------------------------------
 readonly usage="Usage: $0 --operator-namespace <WSA_OPERATOR_NAMESPACE> --instance-namespace <WSA_INSTANCE_NAMESPACE>
+                           [--websphere-automation-version <WSA_VERSION_NUMBER>]
                            [--cert-manager-namespace <CERT_MANAGER_NAMESPACE>]
                            [--licensing-service-namespace <LICENSING_SERVICE_NAMESPACE>]
                            [--cert-manager-catalog-source <CERT_MANAGER_CATALOG_SOURCE>]
                            [--licensing-service-catalog-source <LICENSING_SERVICE_CATALOG_SOURCE>]
                            [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
-                           [--common-services-upgrade-channel <COMMON_SERVICES_UPGRADE_CHANNEL>]
                            [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
                            [--skip-checks]
                            [--allow-errors]"
@@ -70,9 +88,9 @@ parse_args() {
                 shift
                 readonly WSA_INSTANCE_NAMESPACE="${1}"
                 ;;
-            --common-services-upgrade-channel)
+            --websphere-automation-version)
                 shift
-                readonly COMMON_SERVICES_UPGRADE_CHANNEL="${1}"
+                readonly WSA_VERSION_NUMBER="${1}"
                 ;;
             --common-services-case-version)
                 shift
@@ -132,20 +150,28 @@ check_args() {
         exit 1
     fi
 
-    if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
-        echo "==> Common Services upgrade channel not set. Setting as v4.6."
-        COMMON_SERVICES_UPGRADE_CHANNEL="v4.6"
+    if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
+        echo "==> WebSphere Automation version not set. Setting as 1.7.4."
+        WSA_VERSION_NUMBER="1.7.4"
     else
-      IFS='.' read -r -a channelArray <<< "$COMMON_SERVICES_UPGRADE_CHANNEL"
-      if [[ ! $COMMON_SERVICES_UPGRADE_CHANNEL = v* ]] || [[ "${#channelArray[@]}" != "2" ]]; then
-        echo "==> Error: You must provide a channel in a format such as 'v4.6'."
-        exit
-      fi 
+        IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
+        if [[ "${#semVersionArray[@]}" != "3" ]]; then
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.7.4'."
+            echo ""
+            echo "${usage}"
+            exit 1
+        fi
     fi
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        echo "==> Common Services case version is not set. Setting as 4.6.3"
-        COMMON_SERVICES_CASE_VERSION="4.6.3"
+        # Check operator versions that might require using older Common Services case versions
+        if [[ "${WSA_VERSION_NUMBER}" == "1.7.0" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.2" ]]; then
+            COMMON_SERVICES_CASE_VERSION=4.4.0
+        else
+            # Otherwise, use the latest version
+            COMMON_SERVICES_CASE_VERSION=4.6.3
+        fi
+        echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     else
         IFS='.' read -r -a semVersionArray <<< "$COMMON_SERVICES_CASE_VERSION"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
@@ -159,6 +185,7 @@ check_args() {
           fi         
         fi
     fi
+    COMMON_SERVICES_CASE_CHANNEL=$(echo $COMMON_SERVICES_CASE_VERSION | sed 's/\.[^.]*$//')
 
     if [[ -z "${CERT_MANAGER_NAMESPACE}" ]]; then
         echo "==> Cert Manager namespace not set. Setting as ibm-cert-manager."
@@ -199,12 +226,13 @@ check_args() {
 
     echo "==> WebSphere Automation operator namespace is set to: $WSA_OPERATOR_NAMESPACE"
     echo "==> WebSphere Automation instance namespace is set to: $WSA_INSTANCE_NAMESPACE"
+    echo "==> WebSphere Automation version is set to: ${WSA_VERSION_NUMBER}"
     echo "==> Cert Manager namespace is set to: $CERT_MANAGER_NAMESPACE"
     echo "==> Licensing Service namespace is set to: $LICENSING_SERVICE_NAMESPACE"
     echo "==> Cert Manager CatalogSource is set to: $CERT_MANAGER_CATALOG_SOURCE"
     echo "==> Licensing Service CatalogSource is set to: $LICENSING_SERVICE_CATALOG_SOURCE"
     echo "==> Common Services CatalogSource is set to: $COMMON_SERVICES_CATALOG_SOURCE"
-    echo "==> Common Services upgrade channel is set to: $COMMON_SERVICES_UPGRADE_CHANNEL"
+    echo "==> Common Services case channel is set to: $COMMON_SERVICES_CASE_CHANNEL"
     echo "==> Common Services case version is set to: $COMMON_SERVICES_CASE_VERSION"
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
@@ -265,7 +293,7 @@ else
     echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
 
     cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_UPGRADE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
     if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
         wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
         tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
@@ -323,9 +351,9 @@ EOF
 
         cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
         oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE
-        export new_COMMON_SERVICES_UPGRADE_CHANNEL="$COMMON_SERVICES_UPGRADE_CHANNEL"
+        export new_COMMON_SERVICES_CASE_CHANNEL="$COMMON_SERVICES_CASE_CHANNEL"
         export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
-        oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_UPGRADE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
+        oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_CASE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
 
         # STEP 5: Clean up foundational services version 3.x resources
         oc delete deployment secretshare -n $COMMON_SERVICES_NAMESPACE || true
@@ -347,7 +375,7 @@ EOF
         # STEP 7: After completing the preceding manual steps, the existing IM works as is, until CloudPaks are upgraded and stop creating OperandRequests for ibm-iam-operator and ibm-zen-operator.
         oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-platformui-operator\"},{\"name\": \"ibm-events-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
     else
-        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_UPGRADE_CHANNEL."
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_CASE_CHANNEL."
     fi
 fi
 
