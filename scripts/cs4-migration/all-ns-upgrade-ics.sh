@@ -234,7 +234,7 @@ check_args() {
     echo "==> Cert Manager CatalogSource is set to: $CERT_MANAGER_CATALOG_SOURCE"
     echo "==> Licensing Service CatalogSource is set to: $LICENSING_SERVICE_CATALOG_SOURCE"
     echo "==> Common Services CatalogSource is set to: $COMMON_SERVICES_CATALOG_SOURCE"
-    echo "==> Common Services upgrade channel is set to: $COMMON_SERVICES_CASE_CHANNEL"
+    echo "==> Common Services case channel is set to: $COMMON_SERVICES_CASE_CHANNEL"
     echo "==> Common Services case version is set to: $COMMON_SERVICES_CASE_VERSION"
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
