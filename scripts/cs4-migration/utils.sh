@@ -733,7 +733,7 @@ check_catalog_source() {
     cs_name=$1
     cs_count=$(oc get catalogsource -n openshift-marketplace -o name | grep "${cs_name}" -c)
     if [[ "$cs_count" != "1" ]]; then
-        echo "==> Error: The CatalogSource '${cs_name}' does not exist. Follow the instructions on https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.6?topic=online-installing-foundational-services-by-using-console#catalog-sources to install all CatalogSources. Exiting."
+        echo "==> Error: The CatalogSource '${cs_name}' does not exist. Follow the instructions on https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.8?topic=online-installing-foundational-services-by-using-console#catalog-sources to install all CatalogSources. Exiting."
         exit
     fi
 }

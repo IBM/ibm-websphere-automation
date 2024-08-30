@@ -133,23 +133,23 @@ check_args() {
     fi
 
     if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
-        echo "==> Common Services upgrade channel not set. Setting as v4.6."
-        COMMON_SERVICES_UPGRADE_CHANNEL="v4.6"
+        echo "==> Common Services upgrade channel not set. Setting as v4.8."
+        COMMON_SERVICES_UPGRADE_CHANNEL="v4.8"
     else
       IFS='.' read -r -a channelArray <<< "$COMMON_SERVICES_UPGRADE_CHANNEL"
       if [[ ! $COMMON_SERVICES_UPGRADE_CHANNEL = v* ]] || [[ "${#channelArray[@]}" != "2" ]]; then
-        echo "==> Error: You must provide a channel in a format such as 'v4.6'."
+        echo "==> Error: You must provide a channel in a format such as 'v4.8'."
         exit
       fi 
     fi
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        echo "==> Common Services case version is not set. Setting as 4.6.3"
-        COMMON_SERVICES_CASE_VERSION="4.6.3"
+        echo "==> Common Services case version is not set. Setting as 4.8.0"
+        COMMON_SERVICES_CASE_VERSION="4.8.0"
     else
         IFS='.' read -r -a semVersionArray <<< "$COMMON_SERVICES_CASE_VERSION"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.6.3'."
+          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.8.0'."
           exit
         else
           commonServicesURL="https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz"
@@ -209,7 +209,7 @@ check_args() {
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
 
-# Step 1 of 4.6 in-place migration (https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.6?topic=4x-in-place-migration)
+# Step 1 of 4.8 in-place migration (https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.8?topic=4x-in-place-migration)
 scale_down_cs3() {
     cs_ns=$1
     # Scale down the ibm-common-service-operator Deployment in CS namespace
@@ -382,4 +382,3 @@ rm -r ibm-cp-common-services || true
 echo "==> The IBM Cloud Pak foundational services upgrade has completed!"
 echo "    Your OpenShift cluster is ready to install IBM WebSphere Automation Operator version >=1.7.0."
 echo "    To continue this migration, please install the latest driver in the OpenShift UI using OperatorHub."
-
