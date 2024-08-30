@@ -232,7 +232,7 @@ check_args() {
     echo "==> Cert Manager CatalogSource is set to: $CERT_MANAGER_CATALOG_SOURCE"
     echo "==> Licensing Service CatalogSource is set to: $LICENSING_SERVICE_CATALOG_SOURCE"
     echo "==> Common Services CatalogSource is set to: $COMMON_SERVICES_CATALOG_SOURCE"
-    echo "==> Common Services case channel is set to: $COMMON_SERVICES_CASE_CHANNEL"
+    echo "==> Common Services case channel is set to: v$COMMON_SERVICES_CASE_CHANNEL"
     echo "==> Common Services case version is set to: $COMMON_SERVICES_CASE_VERSION"
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
@@ -293,7 +293,7 @@ else
     echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
 
     cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    export new_sub_name="ibm-common-service-operator-v$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
     if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
         wget https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz
         tar -xvzf ibm-cp-common-services-$COMMON_SERVICES_CASE_VERSION.tgz
@@ -351,7 +351,7 @@ EOF
 
         cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
         oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE
-        export new_COMMON_SERVICES_CASE_CHANNEL="$COMMON_SERVICES_CASE_CHANNEL"
+        export new_COMMON_SERVICES_CASE_CHANNEL="v$COMMON_SERVICES_CASE_CHANNEL"
         export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
         oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_CASE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
 
@@ -375,7 +375,7 @@ EOF
         # STEP 7: After completing the preceding manual steps, the existing IM works as is, until CloudPaks are upgraded and stop creating OperandRequests for ibm-iam-operator and ibm-zen-operator.
         oc patch operandrequest websphereauto -n $WSA_INSTANCE_NAMESPACE --type=json -p="[{\"op\": \"add\", \"path\": \"/spec/requests\", \"value\": [{\"operands\": [{\"name\": \"ibm-platformui-operator\"},{\"name\": \"ibm-events-operator\"}],\"registry\": \"common-service\",\"registryNamespace\": \"$WSA_OPERATOR_NAMESPACE\"}]}]"
     else
-        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_CASE_CHANNEL."
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel v$COMMON_SERVICES_CASE_CHANNEL."
     fi
 fi
 

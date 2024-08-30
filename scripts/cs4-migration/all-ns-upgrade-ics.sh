@@ -234,7 +234,7 @@ check_args() {
     echo "==> Cert Manager CatalogSource is set to: $CERT_MANAGER_CATALOG_SOURCE"
     echo "==> Licensing Service CatalogSource is set to: $LICENSING_SERVICE_CATALOG_SOURCE"
     echo "==> Common Services CatalogSource is set to: $COMMON_SERVICES_CATALOG_SOURCE"
-    echo "==> Common Services case channel is set to: $COMMON_SERVICES_CASE_CHANNEL"
+    echo "==> Common Services case channel is set to: v$COMMON_SERVICES_CASE_CHANNEL"
     echo "==> Common Services case version is set to: $COMMON_SERVICES_CASE_VERSION"
     echo "==> Skip checks is set to: $SKIP_CHECKS"
 }
@@ -251,7 +251,7 @@ wait_for_common_services_restart() {
         if (( retries < 0 )); then
             echo "  > Waited too long for CommonServices to restart. Exiting."
             if [[ "$state" == "1" ]]; then
-                echo "    The ibm-common-service-operator-* Deployment did not start up again. Delete the Subscription 'ibm-common-service-operator-$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace' then try running the script again."
+                echo "    The ibm-common-service-operator-* Deployment did not start up again. Delete the Subscription 'ibm-common-service-operator-v$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace' then try running the script again."
             fi
             exit 1
         fi
@@ -349,7 +349,7 @@ else
     echo "IBM Cloud Pak foundational services namespace: $COMMON_SERVICES_NAMESPACE"
 
     cs_operator_name=$(oc get subscription -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator-v" | cut -d "/" -f2)
-    export new_sub_name="ibm-common-service-operator-$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
+    export new_sub_name="ibm-common-service-operator-v$COMMON_SERVICES_CASE_CHANNEL-$COMMON_SERVICES_CATALOG_SOURCE-openshift-marketplace"
     if [[ "$cs_operator_name" != "$new_sub_name" ]]; then 
         oc scale deployment ibm-common-service-operator -n $WSA_OPERATOR_NAMESPACE --replicas=0
         wait_for_common_services_restart "0"
@@ -380,11 +380,11 @@ else
         cs_csv_name=$(oc get csv -n $WSA_OPERATOR_NAMESPACE -o name | grep "ibm-common-service-operator.v" | cut -d "/" -f2)
         oc delete csv $cs_csv_name -n $WSA_OPERATOR_NAMESPACE || true
         
-        export COMMON_SERVICES_CASE_CHANNEL="$COMMON_SERVICES_CASE_CHANNEL"
+        export COMMON_SERVICES_CASE_CHANNEL="v$COMMON_SERVICES_CASE_CHANNEL"
         export new_catalog_source="$COMMON_SERVICES_CATALOG_SOURCE"
         oc get subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name -o json | yq 'del(.metadata.managedFields)' | yq 'del(.metadata.creationTimestamp)' | yq 'del(.metadata.generation)' | yq 'del(.metadata.resourceVersion)' | yq 'del(.metadata.annotations."olm.generated-by")' | yq e '.metadata.name = env(new_sub_name)' | yq e '.spec.startingCSV = null' | yq e '.spec.channel = env(new_COMMON_SERVICES_CASE_CHANNEL)' | yq e '.spec.source = env(new_catalog_source)' | oc apply -n $WSA_OPERATOR_NAMESPACE -f - && oc delete subscription -n $WSA_OPERATOR_NAMESPACE $cs_operator_name
     else
-        echo "==> IBM CloudPak foundational services operator is already upgraded to channel $COMMON_SERVICES_CASE_CHANNEL."
+        echo "==> IBM CloudPak foundational services operator is already upgraded to channel v$COMMON_SERVICES_CASE_CHANNEL."
     fi
 fi
 
