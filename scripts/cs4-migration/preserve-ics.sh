@@ -147,23 +147,23 @@ check_args() {
     fi
 
     if [[ -z "${COMMON_SERVICES_UPGRADE_CHANNEL}" ]]; then
-        echo "==> Common Services upgrade channel not set. Setting as v4.8."
-        COMMON_SERVICES_UPGRADE_CHANNEL="v4.8"
+        echo "==> Common Services upgrade channel not set. Setting as v4.9."
+        COMMON_SERVICES_UPGRADE_CHANNEL="v4.9"
     else
       IFS='.' read -r -a channelArray <<< "$COMMON_SERVICES_UPGRADE_CHANNEL"
       if [[ ! $COMMON_SERVICES_UPGRADE_CHANNEL = v* ]] || [[ "${#channelArray[@]}" != "2" ]]; then
-        echo "==> Error: You must provide a channel in a format such as 'v4.8'."
+        echo "==> Error: You must provide a channel in a format such as 'v4.9'."
         exit
       fi 
     fi
 
     if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        echo "==> Common Services case version is not set. Setting as 4.8.0"
-        COMMON_SERVICES_CASE_VERSION="4.8.0"
+        echo "==> Common Services case version is not set. Setting as 4.9.0"
+        COMMON_SERVICES_CASE_VERSION="4.9.0"
     else
         IFS='.' read -r -a semVersionArray <<< "$COMMON_SERVICES_CASE_VERSION"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.8.0'."
+          echo "==> Error: You must provide the Common Services case version in semantic version format, such as '4.9.0'."
           exit
         else
           commonServicesURL="https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-common-services/${COMMON_SERVICES_CASE_VERSION}/ibm-cp-common-services-${COMMON_SERVICES_CASE_VERSION}.tgz"
