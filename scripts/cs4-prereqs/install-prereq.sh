@@ -5,7 +5,7 @@
 # OCO Source Materials
 # 5900-AH1
 #
-# (C) Copyright IBM Corp. 2024
+# (C) Copyright IBM Corp. 2024, 2025
 #
 # The source code for this program is not published or otherwise
 # divested of its trade secrets, irrespective of what has been
@@ -41,13 +41,13 @@
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") will be created.
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.8.0") that is targeted for installation.
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.8.1") that is targeted for installation.
 #       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator will be installed. Defaults to ibm-cert-manager.
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
 #       --licensing-service-catalog-source $LICENSING_SERVICE_CATALOG_SOURCE - the catalog source name for IBM Licensing operator. Defaults to ibm-licensing-catalog.
 #       --common-services-catalog-source $COMMON_SERVICES_CATALOG_SOURCE - the catalog source name for IBM Cloud Pak foundational services (Common Services). Defaults to ibm-operator-catalog.
-#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.9.0.
+#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) to be installed. Defaults to 4.10.0.
 #       --all-namespaces - only declare when you will be installing IBM WebSphere Automation Operator in AllNamespaces install mode.
 # 
 #   Usage:
@@ -142,12 +142,12 @@ check_args() {
     fi
 
     if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.8.0."
-        WSA_VERSION_NUMBER="1.8.0"
+        echo "==> WebSphere Automation version not set. Setting as 1.8.1."
+        WSA_VERSION_NUMBER="1.8.1"
     else
         IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.8.0'."
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.8.1'."
             echo ""
             echo "${usage}"
             exit 1
@@ -205,9 +205,11 @@ check_args() {
             COMMON_SERVICES_CASE_VERSION=4.6.4
         elif [[ "${WSA_VERSION_NUMBER}" == "1.7.4" ]]; then
             COMMON_SERVICES_CASE_VERSION=4.8.0
+        elif [[ "${WSA_VERSION_NUMBER}" == "1.7.5" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.8.0" ]]; then
+            COMMON_SERVICES_CASE_VERSION=4.9.0
         else
             # Otherwise, use the latest version
-            COMMON_SERVICES_CASE_VERSION=4.9.0
+            COMMON_SERVICES_CASE_VERSION=4.10.0
         fi
         echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     fi
