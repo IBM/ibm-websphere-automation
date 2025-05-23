@@ -1,0 +1,12 @@
+{{- if .Values.wsaSecure.spec.license.accept}}
+apiVersion: automation.websphere.ibm.com/v1
+kind: WebSphereSecure
+metadata:
+  name: wsa-secure
+  namespace: {{.Values.subscription.wsaInstanceNamespace}}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "30"
+spec:
+  {{.Values.wsaSecure.spec | toYaml | indent 2 | trim}}
+{{- end}}  

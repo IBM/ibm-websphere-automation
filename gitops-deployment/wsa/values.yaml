@@ -1,0 +1,29 @@
+catalog:
+  name: ibm-operator-catalog
+  displayName: IBM operator Catalog
+  image: icr.io/cpopen/ibm-operator-catalog:v1.31
+
+subscription:
+  wsaOperatorNamespace: openshift-operators
+  channel: v1.8
+  installPlanApproval: Automatic
+  wsaInstanceNamespace: websphere-automation
+
+wsaSecure:
+  spec:
+    license:
+      accept: ''
+
+wsaHealth:
+  spec:
+    license:
+      accept: ''
+
+wsa:
+  spec:
+    license:
+      accept: ''
+
+ownNamespace: false
+
+ibmOperatorCatalog: true

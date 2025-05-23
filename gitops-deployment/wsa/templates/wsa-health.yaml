@@ -1,0 +1,12 @@
+{{- if .Values.wsaHealth.spec.license.accept}}
+apiVersion: automation.websphere.ibm.com/v1
+kind: WebSphereHealth
+metadata:
+  name: wsa-health
+  namespace: {{.Values.subscription.wsaInstanceNamespace}}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "30"
+spec:
+  {{.Values.wsaHealth.spec | toYaml | indent 2 | trim}}
+{{- end}}  
