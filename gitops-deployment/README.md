@@ -8,7 +8,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 ## Contents
 
 - [Prerequisites](#prerequisites)
-- [Installing Openshift GitOps](#installing-openshift-gitops)
+- [Installing OpenShift GitOps](#installing-openshift-gitops)
 - [Deploy ArgoCD Applications](#deploy-argocd-applications)
   - [Custom Health Checks](#custom-health-checks)
   - [WSA](#wsa)
@@ -18,9 +18,9 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 
 - Ensure the cluster meets the supported platform, sizing, persistent storage, and network requirements indended for WebSphere Automation. For more information, see [System Requirements](https://www.ibm.com/docs/en/ws-automation?topic=installation-system-requirements)
 
-- Prior to deploying WSA application using argoCD, make sure to install WSA operator pre-requisites, which include IBM Cloud Pak foundational services, IBM Cert Manager operator, IBM Licensing operator, and ingress network policies. Follow steps from here (https://www.ibm.com/docs/en/ws-automation?topic=automation-installing-websphere-operator-prerequisites) to set up the pre-requisites.
+- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which include IBM Cloud Pak foundational services, IBM Cert Manager operator, IBM Licensing operator, and ingress network policies. Follow steps from here (https://www.ibm.com/docs/en/ws-automation?topic=automation-installing-websphere-operator-prerequisites) to set up the pre-requisites.
 
-## Installing Openshift GitOps
+## Installing OpenShift GitOps
 
 Complete the following steps to install the OpenShift GitOps Operator.
 
@@ -56,7 +56,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
     EOF
     ```
 
-3. Creating a `argocd-cluster-admin` ClusterRoleBinding to grant ArgoCD the necessary permissions to manage resources across the Openshift cluster.
+3. Creating a `argocd-cluster-admin` ClusterRoleBinding to grant ArgoCD the necessary permissions to manage resources across the OpenShift cluster.
 
     ```bash
     oc adm policy add-cluster-role-to-user cluster-admin \
@@ -90,7 +90,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
     oc get routes -n openshift-gitops
     ```
 
-    Navigate to that route and login by selecting the Openshift Login option and providing the clusters credentials.    
+    Navigate to that route and login by selecting the OpenShift Login option and providing the clusters credentials.    
 
 ## Deploy ArgoCD Applications
 
