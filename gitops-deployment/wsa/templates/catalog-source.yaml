@@ -1,0 +1,23 @@
+{{- $existingCatalog := lookup "operators.coreos.com/v1alpha1" "CatalogSource" "openshift-marketplace" "ibm-operator-catalog"}}
+{{- if not $existingCatalog }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: {{.Values.catalog.name}}
+  namespace: openshift-marketplace
+  annotations:
+    {{- if .Values.ibmOperatorCatalog}}
+    olm.catalogImageTemplate: "icr.io/cpopen/ibm-operator-catalog:v{kube_major_version}.{kube_minor_version}"
+    {{- end }} 
+    argocd.argoproj.io/sync-wave: "10"  
+spec:
+  displayName: {{.Values.catalog.displayName}}
+  sourceType: grpc
+  image: {{.Values.catalog.image}}
+  {{- if .Values.ibmOperatorCatalog}}
+  publisher: IBM
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+  {{- end }}    
+{{- end }}   
