@@ -4,7 +4,7 @@ catalog:
   image: icr.io/cpopen/ibm-operator-catalog:v1.31
 
 subscription:
-  wsaOperatorNamespace: openshift-operators
+  wsaOperatorNamespace: ''
   channel: v1.8
   installPlanApproval: Automatic
   wsaInstanceNamespace: websphere-automation
@@ -24,6 +24,6 @@ wsa:
     license:
       accept: ''
 
-ownNamespace: false
+ownNamespace: true
 
 ibmOperatorCatalog: true
