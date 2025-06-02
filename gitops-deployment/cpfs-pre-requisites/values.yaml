@@ -1,0 +1,11 @@
+catalog:
+  image: icr.io/cpopen/ibm-operator-catalog:latest
+  name: ibm-operator-catalog
+
+subscription:
+  wsaInstanceNamespace: ibm-common-services
+  wsaOperatorNamespace: openshift-operators
+  installPlanApproval: Automatic
+  channel: v4.10
+
+ownNamespace: false

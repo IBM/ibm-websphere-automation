@@ -3,21 +3,17 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: {{.Values.catalog.name}}
+  name: ibm-operator-catalog
   namespace: openshift-marketplace
   annotations:
-    {{- if .Values.ibmOperatorCatalog}}
     olm.catalogImageTemplate: "icr.io/cpopen/ibm-operator-catalog:v{kube_major_version}.{kube_minor_version}"
-    {{- end }} 
-    argocd.argoproj.io/sync-wave: "10"  
+    argocd.argoproj.io/sync-wave: "10"
 spec:
-  displayName: {{.Values.catalog.displayName}}
+  displayName: IBM operator Catalog
+  publisher: IBM
   sourceType: grpc
   image: {{.Values.catalog.image}}
-  {{- if .Values.ibmOperatorCatalog}}
-  publisher: IBM
   updateStrategy:
     registryPoll:
       interval: 45m
-  {{- end }}    
-{{- end }}   
+{{- end }}         
