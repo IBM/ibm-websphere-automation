@@ -86,7 +86,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
 4. Access the ArgoCD UI and verify Git Repository Connnectivity.
     
     The ArgoCD URL can be obtained via the `openshift-gitops` namespace route.
-    ```
+    ```bash
     oc get routes -n openshift-gitops
     ```
 
@@ -97,7 +97,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
 ### Custom Health Checks
 
 Create the ArgoCD Application for Custom Health Checks:
-```
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -134,8 +134,16 @@ EOF
 Create the WSA Application:
 
 #### Example 1: Deploying GA Operator with values overriden
-Overrides to accept the license for WebSphereSecure CR
+
+Set the necessary environment variables:
+```bash
+export VALUES_FILE=values.yaml
+export WSA_OPERATOR_NAMESPACE=<WSA operator namespace>
+export LICENSE_ACCEPT=true
 ```
+
+Create the application
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -158,12 +166,17 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values.yaml
+        - ${VALUES_FILE}
       valuesObject:
+        wsaOperatorNamespace: ${WSA_OPERATOR_NAMESPACE}
         wsaSecure:
           spec:
             license:
-              accept: true
+              accept: ${LICENSE_ACCEPT}
+        wsa:
+          spec:
+            license:
+              accept: ${LICENSE_ACCEPT}      
   syncPolicy:
       retry:
         limit: 10
@@ -176,8 +189,12 @@ EOF
 ```
 
 #### Example 2: Deploying GA operator using pre-confgured values from a values file
-Apply the following configuration to accept the license for WebSphereSecure & WebSphereAutomation CRs
+Set the necessary environment variables:
+```bash
+export VALUES_FILE=values.wsa-secure.yaml
 ```
+Create the application
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -200,7 +217,7 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values.wsa-secure.yaml
+        - ${VALUES_FILE}
   syncPolicy:
       retry:
         limit: 10
