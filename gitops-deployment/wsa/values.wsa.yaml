@@ -4,13 +4,15 @@ catalog:
   image: icr.io/cpopen/ibm-operator-catalog:v1.31
 
 subscription:
-  wsaOperatorNamespace: ''
+  wsaOperatorNamespace: websphere-automation
   channel: v1.8
   installPlanApproval: Automatic
   wsaInstanceNamespace: websphere-automation
 
 wsa:
   spec:
+    commonServices:
+      registryNamespace: websphere-automation
     license:
       accept: true
 

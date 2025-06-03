@@ -7,7 +7,7 @@ subscription:
   wsaOperatorNamespace: ''
   channel: v1.8
   installPlanApproval: Automatic
-  wsaInstanceNamespace: websphere-automation
+  wsaInstanceNamespace: ''
 
 wsaSecure:
   spec:
@@ -21,6 +21,8 @@ wsaHealth:
 
 wsa:
   spec:
+    commonServices:
+      registryNamespace: ''
     license:
       accept: ''
 
