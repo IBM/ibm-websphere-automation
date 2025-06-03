@@ -192,6 +192,7 @@ EOF
 Set the necessary environment variables:
 ```bash
 export VALUES_FILE=values.wsa-secure.yaml
+export WSA_OPERATOR_NAMESPACE=<WSA operator namespace>
 ```
 Create the application
 ```bash
@@ -218,6 +219,8 @@ spec:
     helm:
       valueFiles:
         - ${VALUES_FILE}
+      valuesObject:  
+        wsaOperatorNamespace: ${WSA_OPERATOR_NAMESPACE}
   syncPolicy:
       retry:
         limit: 10
