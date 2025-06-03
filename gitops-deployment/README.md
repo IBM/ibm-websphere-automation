@@ -132,13 +132,14 @@ EOF
 ### WSA
 
 Create the WSA Application:
+Note: The default configuration available in the values files applies for Single Namespace installation mode.
 
-#### Example 1: Deploying GA Operator with values overriden
+#### Example 1: Creating an instance of WebSphereSecure & WebSphereAutomation by providing custom values
 
 Set the necessary environment variables:
 ```bash
 export VALUES_FILE=values.yaml
-export WSA_OPERATOR_NAMESPACE=<WSA operator namespace>
+export WSA_NAMESPACE=<WSA namespace>
 export LICENSE_ACCEPT=true
 ```
 
@@ -168,15 +169,20 @@ spec:
       valueFiles:
         - ${VALUES_FILE}
       valuesObject:
-        wsaOperatorNamespace: ${WSA_OPERATOR_NAMESPACE}
+        subscription:
+          wsaOperatorNamespace: ${WSA_NAMESPACE}
+          wsaInstanceNamespace: ${WSA_NAMESPACE}
         wsaSecure:
           spec:
             license:
               accept: ${LICENSE_ACCEPT}
+
         wsa:
           spec:
+            commonServices:
+              registryNamespace: ${WSA_NAMESPACE}
             license:
-              accept: ${LICENSE_ACCEPT}      
+              accept: ${LICENSE_ACCEPT}
   syncPolicy:
       retry:
         limit: 10
@@ -188,11 +194,10 @@ spec:
 EOF
 ```
 
-#### Example 2: Deploying GA operator using pre-confgured values from a values file
+#### Example 2: Creating an instance of WebSphereSecure & WebSphereAutomation using pre-confgured values from a values file
 Set the necessary environment variables:
 ```bash
 export VALUES_FILE=values.wsa-secure.yaml
-export WSA_OPERATOR_NAMESPACE=<WSA operator namespace>
 ```
 Create the application
 ```bash
@@ -219,8 +224,6 @@ spec:
     helm:
       valueFiles:
         - ${VALUES_FILE}
-      valuesObject:  
-        wsaOperatorNamespace: ${WSA_OPERATOR_NAMESPACE}
   syncPolicy:
       retry:
         limit: 10
