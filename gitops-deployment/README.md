@@ -18,7 +18,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 
 - Ensure the cluster meets the supported platform, sizing, persistent storage, and network requirements indended for WebSphere Automation. For more information, see [System Requirements](https://www.ibm.com/docs/en/ws-automation?topic=installation-system-requirements)
 
-- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which include IBM Cloud Pak foundational services, IBM Cert Manager operator, IBM Licensing operator, and ingress network policies. Follow steps from here (https://www.ibm.com/docs/en/ws-automation?topic=automation-installing-websphere-operator-prerequisites) to set up the pre-requisites.
+- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which include the IBM Cert Manager operator, IBM Licensing operator, and ingress network policies. Follow steps from here (https://www.ibm.com/docs/en/ws-automation?topic=automation-installing-websphere-operator-prerequisites) to set up the pre-requisites.
 
 ## Installing OpenShift GitOps
 
@@ -134,7 +134,7 @@ EOF
 Create the WSA Application:
 Note: The default configuration available in the values files applies for Single Namespace installation mode.
 
-#### Example 1: Creating an instance of WebSphereSecure & WebSphereAutomation by providing custom values
+#### Example 1: Creating an instance of WebSphereAutomation by providing custom values
 
 Set the necessary environment variables:
 ```bash
