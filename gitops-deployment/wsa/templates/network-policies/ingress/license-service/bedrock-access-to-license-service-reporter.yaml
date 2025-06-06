@@ -1,0 +1,19 @@
+{{- if .Values.licensingNamespace}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: access-to-ibm-licensing-service-reporter
+  namespace: {{.Values.licensingNamespace}}
+  labels:
+    component: cpfs3
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"  
+spec:
+  podSelector:
+    matchLabels:
+      app: ibm-license-service-reporter-instance
+  ingress:
+    - {}
+  policyTypes:
+    - Ingress
+{{- end }}

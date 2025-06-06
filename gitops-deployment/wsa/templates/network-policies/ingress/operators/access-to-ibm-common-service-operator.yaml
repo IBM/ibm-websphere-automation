@@ -1,0 +1,19 @@
+{{- if .Values.operatorNamespace}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    component: cpfs3
+  name: access-to-ibm-common-service-operator
+  namespace: {{.Values.operatorNamespace}}
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  ingress:
+  - {}
+  podSelector:
+    matchLabels:
+      name: ibm-common-service-operator
+  policyTypes:
+  - Ingress
+{{- end }}

@@ -18,7 +18,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 
 - Ensure the cluster meets the supported platform, sizing, persistent storage, and network requirements indended for WebSphere Automation. For more information, see [System Requirements](https://www.ibm.com/docs/en/ws-automation?topic=installation-system-requirements)
 
-- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which include IBM Cloud Pak foundational services, IBM Cert Manager operator, IBM Licensing operator, and ingress network policies. Follow steps from here (https://www.ibm.com/docs/en/ws-automation?topic=automation-installing-websphere-operator-prerequisites) to set up the pre-requisites.
+- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which includes Redhat Cert Manager operator and IBM Licensing operator. 
 
 ## Installing OpenShift GitOps
 
@@ -86,7 +86,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
 4. Access the ArgoCD UI and verify Git Repository Connnectivity.
     
     The ArgoCD URL can be obtained via the `openshift-gitops` namespace route.
-    ```
+    ```bash
     oc get routes -n openshift-gitops
     ```
 
@@ -97,7 +97,7 @@ Complete the following steps to install the OpenShift GitOps Operator.
 ### Custom Health Checks
 
 Create the ArgoCD Application for Custom Health Checks:
-```
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -132,10 +132,21 @@ EOF
 ### WSA
 
 Create the WSA Application:
+Note: The default configuration available in the values files applies for Single Namespace installation mode.
 
-#### Example 1: Deploying GA Operator with values overriden
-Overrides to accept the license for WebSphereSecure CR
+#### Example 1: Creating an instance of WebSphereAutomation by providing custom values
+
+Set the necessary environment variables:
+```bash
+export VALUES_FILE=values.yaml
+export WSA_NAMESPACE=<WSA namespace>
+export LICENSE_ACCEPT=true
+export LICENSE_NAMESPACE=<IBM Licensing Namespace>
+export CERT_MANAGER_NAMESPACE=<Cert Manager Namespace>
 ```
+
+Create the application
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -158,12 +169,25 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values.yaml
+        - ${VALUES_FILE}
       valuesObject:
+        subscription:
+          wsaOperatorNamespace: ${WSA_NAMESPACE}
+          wsaInstanceNamespace: ${WSA_NAMESPACE}
         wsaSecure:
           spec:
             license:
-              accept: true
+              accept: ${LICENSE_ACCEPT}
+        wsa:
+          spec:
+            commonServices:
+              registryNamespace: ${WSA_NAMESPACE}
+            license:
+              accept: ${LICENSE_ACCEPT}
+        operatorNamespace: ${WSA_NAMESPACE}
+        commonServicesNamespace: ${WSA_NAMESPACE}
+        licensingNamespace: ${LICENSE_NAMESPACE}
+        certManagerNamespace: ${CERT_MANAGER_NAMESPACE}
   syncPolicy:
       retry:
         limit: 10
@@ -175,9 +199,13 @@ spec:
 EOF
 ```
 
-#### Example 2: Deploying GA operator using pre-confgured values from a values file
-Apply the following configuration to accept the license for WebSphereSecure & WebSphereAutomation CRs
+#### Example 2: Creating an instance of WebSphereSecure & WebSphereAutomation using pre-confgured values from a values file
+Set the necessary environment variables:
+```bash
+export VALUES_FILE=values.wsa-secure.yaml
 ```
+Create the application
+```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -200,7 +228,7 @@ spec:
     targetRevision: main
     helm:
       valueFiles:
-        - values.wsa-secure.yaml
+        - ${VALUES_FILE}
   syncPolicy:
       retry:
         limit: 10
