@@ -26,16 +26,10 @@ wsa:
     license:
       accept: true
 
-ownNamespace: true
+operatorNamespace: websphere-automation
 
-ibmOperatorCatalog: true
+commonServicesNamespace: websphere-automation
 
-opNamespace: websphere-automation
+licensingNamespace: ibm-licensing
 
-csNamespace: websphere-automation
-
-zenNamespace: websphere-automation
-
-licNamespace: ibm-licensing
-
-certNamespace: cert-manager-operator
+certManagerNamespace: cert-manager-operator

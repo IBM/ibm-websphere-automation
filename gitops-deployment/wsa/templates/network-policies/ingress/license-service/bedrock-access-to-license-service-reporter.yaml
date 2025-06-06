@@ -1,9 +1,9 @@
-{{- if .Values.licNamespace}}
+{{- if .Values.licensingNamespace}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: access-to-ibm-licensing-service-reporter
-  namespace: {{.Values.licNamespace}}
+  namespace: {{.Values.licensingNamespace}}
   labels:
     component: cpfs3
   annotations:

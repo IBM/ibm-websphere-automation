@@ -1,11 +1,11 @@
-{{- if .Values.csNamespace}}
+{{- if .Values.commonServicesNamespace}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
     component: cpfs3
   name: access-to-common-web-ui
-  namespace: {{.Values.csNamespace}}
+  namespace: {{.Values.commonServicesNamespace}}
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:

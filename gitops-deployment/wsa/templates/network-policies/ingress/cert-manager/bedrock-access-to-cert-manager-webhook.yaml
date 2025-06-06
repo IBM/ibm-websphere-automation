@@ -1,9 +1,9 @@
-{{- if .Values.certNamespace}}
+{{- if .Values.certManagerNamespace}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: access-to-cert-manager-webhook
-  namespace: {{.Values.certNamespace}}
+  namespace: {{.Values.certManagerNamespace}}
   labels:
     component: cpfs3
   annotations:

@@ -1,11 +1,11 @@
-{{- if .Values.opNamespace}}
+{{- if .Values.operatorNamespace}}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
     component: cpfs3
   name: access-to-zen-meta-api
-  namespace: {{.Values.opNamespace}}
+  namespace: {{.Values.operatorNamespace}}
   annotations:
     argocd.argoproj.io/sync-wave: "0"
 spec:

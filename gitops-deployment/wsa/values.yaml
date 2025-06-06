@@ -26,16 +26,10 @@ wsa:
     license:
       accept: ''
 
-ownNamespace: true
+operatorNamespace: ''
 
-ibmOperatorCatalog: true
+commonServicesNamespace: ''
 
-opNamespace: ''
+licensingNamespace: ''
 
-csNamespace: ''
-
-zenNamespace: ''
-
-licNamespace: ''
-
-certNamespace: ''
+certManagerNamespace: ''
