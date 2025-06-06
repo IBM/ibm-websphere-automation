@@ -1,0 +1,20 @@
+{{- if .Values.csNamespace}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: access-to-zen-core
+  namespace: {{.Values.csNamespace}}
+  labels:
+    component: cpfs3
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"  
+spec:
+  podSelector:
+    matchLabels:
+      component: "zen-core"
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector: {}
+{{- end }}    

@@ -29,3 +29,13 @@ wsa:
 ownNamespace: true
 
 ibmOperatorCatalog: true
+
+opNamespace: ''
+
+csNamespace: ''
+
+zenNamespace: ''
+
+licNamespace: ''
+
+certNamespace: ''

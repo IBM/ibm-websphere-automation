@@ -24,3 +24,13 @@ wsa:
 ownNamespace: true
 
 ibmOperatorCatalog: true
+
+opNamespace: websphere-automation
+
+csNamespace: websphere-automation
+
+zenNamespace: websphere-automation
+
+licNamespace: ibm-licensing
+
+certNamespace: cert-manager-operator
