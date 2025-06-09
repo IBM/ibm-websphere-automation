@@ -20,4 +20,4 @@ spec:
         matchLabels:
           kubernetes.io/metadata.name: {{.Values.operatorNamespace}}
     - podSelector: {}
-{{- end }}    
+{{- end}}    

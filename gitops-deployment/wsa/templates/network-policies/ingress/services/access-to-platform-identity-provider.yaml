@@ -16,4 +16,4 @@ spec:
       k8s-app: platform-identity-provider
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

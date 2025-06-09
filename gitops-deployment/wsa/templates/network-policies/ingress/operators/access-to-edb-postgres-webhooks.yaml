@@ -16,4 +16,4 @@ spec:
       app.kubernetes.io/name: cloud-native-postgresql
   policyTypes:
   - Ingress
-{{- end }} 
+{{- end}} 
