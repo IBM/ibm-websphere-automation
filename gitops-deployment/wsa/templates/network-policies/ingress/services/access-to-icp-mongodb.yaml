@@ -16,4 +16,4 @@ spec:
       app: icp-mongodb
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

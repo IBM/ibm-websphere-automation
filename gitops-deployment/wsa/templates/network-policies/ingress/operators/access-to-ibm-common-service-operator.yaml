@@ -16,4 +16,4 @@ spec:
       name: ibm-common-service-operator
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

@@ -14,4 +14,4 @@ spec:
       app: ibm-cert-manager-webhook
   ingress:
   - {}
-{{- end }}
+{{- end}}

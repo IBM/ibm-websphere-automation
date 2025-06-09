@@ -1,5 +1,5 @@
 {{- $existingCatalog := lookup "operators.coreos.com/v1alpha1" "CatalogSource" "openshift-marketplace" "ibm-operator-catalog"}}
-{{- if not $existingCatalog }}
+{{- if not $existingCatalog}}
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -16,4 +16,4 @@ spec:
   updateStrategy:
     registryPoll:
       interval: 45m
-{{- end }}   
+{{- end}}   

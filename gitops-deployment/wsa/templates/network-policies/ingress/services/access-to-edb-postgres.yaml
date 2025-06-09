@@ -17,4 +17,4 @@ spec:
       operator: Exists
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

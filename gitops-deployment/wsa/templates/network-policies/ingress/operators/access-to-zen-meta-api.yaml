@@ -16,4 +16,4 @@ spec:
       app.kubernetes.io/instance: ibm-zen-meta-api
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

@@ -18,7 +18,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 
 - Ensure the cluster meets the supported platform, sizing, persistent storage, and network requirements indended for WebSphere Automation. For more information, see [System Requirements](https://www.ibm.com/docs/en/ws-automation?topic=installation-system-requirements)
 
-- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which includes Redhat Cert Manager operator and IBM Licensing operator. 
+- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which includes Red Hat Cert Manager operator and IBM Licensing operator. 
 
 ## Installing OpenShift GitOps
 
