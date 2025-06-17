@@ -16,4 +16,4 @@ spec:
       k8s-app: common-web-ui
   policyTypes:
   - Ingress
-{{- end }}
+{{- end}}

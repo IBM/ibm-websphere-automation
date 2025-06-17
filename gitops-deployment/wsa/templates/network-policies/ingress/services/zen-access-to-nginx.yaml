@@ -16,4 +16,4 @@ spec:
   - Ingress
   ingress:
   - {}
-{{- end }}
+{{- end}}
