@@ -9,115 +9,143 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
 
 - [Prerequisites](#prerequisites)
 - [Installing OpenShift GitOps](#installing-openshift-gitops)
-- [Deploy ArgoCD Applications](#deploy-argocd-applications)
-  - [Custom Health Checks](#custom-health-checks)
-  - [WSA](#wsa)
-- [Sync Applications](#sync-applications)
+  - [GitOps RBAC Requirements](#gitops-application-controller-privilege-requirements)
+  - [Deploy ArgoCD Applications](#deploy-argo-cd-applications)
+    - [Argo CD Custom Health Checks](#argo-cd-custom-health-checks)
+    - [IBM Licensing Service](#ibm-licensing-service)
+    - [IBM Cert Manager](#ibm-cert-manager)
+    - [IBM WebSphere Automation](#ibm-websphere-automation)
+  - [Sync Applications](#sync-applications)
+  - [Verify your Installation](#verify-your-installation)
+- [Customised Installation](#customized-installation)
 
 ## Prerequisites
 
 - Ensure the cluster meets the supported platform, sizing, persistent storage, and network requirements indended for WebSphere Automation. For more information, see [System Requirements](https://www.ibm.com/docs/en/ws-automation?topic=installation-system-requirements)
 
-- Prior to deploying WSA application using ArgoCD, make sure to install WSA operator pre-requisites, which includes Red Hat Cert Manager operator and IBM Licensing operator. 
+- You must have Red Hat OpenShift GitOps (Argo CD) installed on your Red Hat OpenShift cluster. For more information, see [Installing OpenShift GitOps](https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/latest/html/installing_gitops/installing-openshift-gitops) in the Red Hat OpenShift documentation.
 
 ## Installing OpenShift GitOps
 
-Complete the following steps to install the OpenShift GitOps Operator.
+### GitOps Application Controller Privilege Requirements
+The service account used by the GitOps Application Controller will require elevated privileges to manage specific resources during the IBM WebSphere Automation. The extent of these privilege escalations will depend on the scope of the OpenShift GitOps ArgoCD instance—whether it is deployed in a namespace-scoped or cluster-wide configuration. For more information, see Argo CD instance scopes in the Red Hat OpenShift documentation.
 
-1. Create the Operator namespace
-    
-    ```bash
-    oc create ns openshift-gitops-operator
-    ```
+The Role and RoleBinding examples provided below may be used to grant these additional permissions. However, it is strongly recommended that a cluster administrator carefully review and validate these permissions before applying them.
 
-2. Create the Operator Group and OpenShift GitOps Subscription, wait for `OpenShift GitOps` to roll out under the `openshift-gitops` namespace.
+```bash
+export GITOPS_NAMESPACE=openshift-gitops
+export GITOPS_SERVICEACCOUNT=openshift-gitops-argocd-application-controller
+export WSA_NAMESPACE=websphere-automation
+```
 
-    ```bash
-    cat <<EOF | oc apply -f -
-    apiVersion: operators.coreos.com/v1
-    kind: OperatorGroup
-    metadata:
-      name: openshift-gitops-operator
-      namespace: openshift-gitops-operator
-    spec:
-      upgradeStrategy: Default
-    ---
-    apiVersion: operators.coreos.com/v1alpha1
-    kind: Subscription
-    metadata:
-      name: openshift-gitops-operator
-      namespace: openshift-gitops-operator
-    spec:
-      channel: latest
-      installPlanApproval: Automatic
-      name: openshift-gitops-operator
-      source: redhat-operators
-      sourceNamespace: openshift-marketplace
-    EOF
-    ```
+#### The GitOps ArgoCD instance is deployed in cluster-wide mode:
 
-3. Creating a `argocd-cluster-admin` ClusterRoleBinding to grant ArgoCD the necessary permissions to manage resources across the OpenShift cluster.
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitops-websphere-automation-role
+  namespace: ${WSA_NAMESPACE}
+rules:
+  - apiGroups: ["automation.websphere.ibm.com"]
+    resources: ["WebSphereHealth", "WebSphereSecure", "WebSphereAutomation"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+EOF
+```
 
-    ```bash
-    oc adm policy add-cluster-role-to-user cluster-admin \
-        system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller \
-        -n openshift-gitops --rolebinding-name=argocd-cluster-admin
-    ```
+#### The GitOps ArgoCD instance is deployed in namespace-scoped mode:
 
-    Alternatively, you can apply the ClusterRoleBinding via YAML:
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gitops-websphere-automation-role
+  namespace: ${WSA_NAMESPACE}
+rules:
+  - apiGroups: ["operators.coreos.com"]
+    resources: ["operatorgroups", "catalogsources"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["automation.websphere.ibm.com"]
+    resources: ["WebSphereHealth", "WebSphereSecure", "WebSphereAutomation"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+EOF
+```
 
-    ```bash
-    cat <<EOF | oc apply -f -
-    kind: ClusterRoleBinding
-    apiVersion: rbac.authorization.k8s.io/v1
-    metadata:
-      name: argocd-cluster-admin
-    subjects:
-      - kind: ServiceAccount
-        name: openshift-gitops-argocd-application-controller
-        namespace: openshift-gitops
-    roleRef:
-      apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-admin
-    EOF
-    ```
+#### Apply the RoleBinding to link the Role to the GitOps Application Controller service account
 
-4. Access the ArgoCD UI and verify Git Repository Connnectivity.
-    
-    The ArgoCD URL can be obtained via the `openshift-gitops` namespace route.
-    ```bash
-    oc get routes -n openshift-gitops
-    ```
+```bash
+cat <<EOF | oc create -f -
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: gitops-websphere-automation-rolebinding
+  namespace: ${WSA_NAMESPACE}
+subjects:
+- kind: ServiceAccount
+  name: ${GITOPS_SERVICEACCOUNT}
+  namespace: ${GITOPS_NAMESPACE}
+roleRef:
+  kind: Role
+  name: gitops-websphere-automation-role
+EOF
+```  
 
-    Navigate to that route and login by selecting the OpenShift Login option and providing the clusters credentials.    
+### Deploy Argo CD Applications
 
-## Deploy ArgoCD Applications
+Argo CD Applications are registered with the Argo CD server to define the desired state of Kubernetes resources. Each application specifies the source repository containing the manifests and the target cluster where those resources should be deployed. To deploy IBM WebSphere Automation, the Argo CD server synchronizes the corresponding applications to the target cluster, ensuring that the defined resources are applied and maintained in the desired state.
 
-### Custom Health Checks
+This section describes the Argo CD Applications that will be synchronized in the following steps to complete the installation. The Helm Chart Templates for IBM WebSphere Automation are hosted in a GitHub repository at https://github.com/IBM/ibm-websphere-automation/tree/main/gitops-deployment, which includes dedicated branches and release artifacts for each version. If customization is needed, you may use a forked repository as the SOURCE_REPOSITORY. Refer to the [Customized Installation](#customized-installation) section for guidance on modifying the Helm Chart Templates.
 
-Create the ArgoCD Application for Custom Health Checks:
+- [Argo CD Custom Health Checks](#argo-cd-custom-health-checks)
+- [IBM Licensing Service](#ibm-licensing-service)
+- [IBM Cert Manager](#ibm-cert-manager)
+- [IBM WebSphere Automation](#ibm-cloud-pak-for-aiops)
+
+When configuring Argo CD applications:
+
+- Set the SOURCE_REPOSITORY to the GitHub repository containing the Helm Chart Templates.
+- Set the TARGET_REVISION to the branch name that corresponds to the desired IBM WebSphere Automation version (e.g., use 1.9.0 for WSA version 1.9.0).
+- Set the GITOPS_NAMESPACE to namespace in which the ArgoCD instance is deployed.
+
+#### Argo CD Custom Health Checks
+
+Argo CD Custom Health Checks are a powerful feature that lets you define how Argo CD determines the health status of your custom Kubernetes resources (like CRDs). By default, Argo CD knows how to assess the health of standard Kubernetes resources (e.g., Deployments, Services), but for custom resources, you need to teach it what “healthy” means.
+
+Create the following Argo CD Application, which includes custom health check configurations for both the Catalog Source and the IBM WebSphere Automation custom resources. Ensure that the `GITOPS_INSTANCE` and `GITOPS_NAMESPACE` variables coorrespond to the ArgoCD instance that will be used for the subsequent installation of IBM WebSphere Automation.
+
+```bash
+export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
+export TARGET_REVISION=<release-version>
+export GITOPS_INSTANCE=openshift-gitops
+export GITOPS_NAMESPACE=openshift-gitops
+```
+
 ```bash
 cat <<EOF | oc apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: argocd
-  namespace: openshift-gitops
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+  namespace: ${GITOPS_NAMESPACE}
   labels:
     app.kubernetes.io/instance: argocd
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   destination:
-    namespace: default
+    namespace: ${GITOPS_NAMESPACE}
     server: 'https://kubernetes.default.svc'
   source:
-    repoURL: 'https://github.com/IBM/ibm-websphere-automation'
-    path: gitops-deployment/argocd
-    targetRevision: main
+    repoURL: ${SOURCE_REPOSITORY}
+    path: argocd
+    targetRevision: ${TARGET_REVISION}
+    helm:
+      valuesObject:
+        gitops:
+          instance: ${GITOPS_INSTANCE}
+          namespace: ${GITOPS_NAMESPACE}
   syncPolicy:
     retry:
       limit: 10
@@ -129,10 +157,106 @@ spec:
 EOF
 ```
 
-### WSA
+#### IBM Licensing Service
 
-Create the WSA Application:
-Note: The default configuration available in the values files applies for Single Namespace installation mode.
+Skip this step if the IBM Cloud Pak Foundational Services License Service is already installed on the Red Hat OpenShift cluster that you are installing IBM WebSphere Automation on.
+
+Create the following Argo CD Application to deploy the IBM Licensing Service.
+
+```bash
+export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
+export TARGET_REVISION=<release-version>
+export GITOPS_NAMESPACE=openshift-gitops
+```
+
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ibm-licensing
+  namespace: ${GITOPS_NAMESPACE}
+  labels:
+    app.kubernetes.io/instance: ibm-licensing
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  destination:
+    namespace: ibm-licensing
+    server: 'https://kubernetes.default.svc'
+  source:
+    repoURL: ${SOURCE_REPOSITORY}
+    path: licensing
+    targetRevision: ${TARGET_REVISION}
+  syncPolicy:
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
+  project: default
+EOF
+```
+
+#### IBM Cert Manager
+
+Skip this step if you already have a certificate manager installed on the Red Hat OpenShift cluster that you are installing IBM WebSphere Automation on. If you do not have a certificate manager then you must install one. 
+
+Create the following ArgoCD Application to deploy the IBM Certificate Manager.
+
+```bash
+export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
+export TARGET_REVISION=<release-version>
+export GITOPS_NAMESPACE=openshift-gitops
+```
+
+```bash
+cat <<EOF | oc apply -f -
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ibm-cert-manager
+  namespace: ${GITOPS_NAMESPACE}
+  labels:
+    app.kubernetes.io/instance: ibm-cert-manager
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  destination:
+    namespace: ibm-cert-manager
+    server: 'https://kubernetes.default.svc'
+  source:
+    repoURL: ${SOURCE_REPOSITORY}
+    path: cert-manager
+    targetRevision: ${TARGET_REVISION}
+  syncPolicy:
+    retry:
+      limit: 10
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 1m
+  project: default
+EOF
+```
+
+#### IBM WebSphere Automation
+ 
+Create the following Argo CD Application to deploy IBM WebSphere Automation
+
+Four values files are available under /wsa path, with values.yaml being a configurable file and the rest 3 values files representing a supported configuration of the IBM WebSphere Automation custom resource (CR) installation:
+
+- `values.yaml`: A configurable values file for WSA.
+- `values.wsa-health.yaml`: This values file can be applied to create instances of WebSphereHealth, WebSphereSecure & WebSphereAutomation CRs on the cluster.
+- `values.wsa-secure.yaml`: This values file can be applied to create instances of WebSphereHealth & WebSphereSecure CRs on the cluster.
+- `values.wsa.yaml`: This values file can be applied to create an instance of WebSphereAutomation CR on the cluster.
+
+Each values file includes the attribute `gitops.namespaceScoped`, which is set to false by default. If the ArgoCD instance is deployed in namespace-scoped mode, this attribute **must** be set to true.
+
+When `gitops.namespaceScoped` is set to true, the namespace is excluded from GitOps management. This is necessary because a namespace-scoped ArgoCD instance cannot manage cluster-scoped resources such as namespaces, Custom Resource Definitions (CRDs), or ClusterRoles.
+
+Default values can be overridden, and additional attributes for the Installation custom resource (CR) can be specified using the `valuesObject` block, as detailed in the sections below.
 
 #### Example 1: Creating an instance of WebSphereAutomation by providing custom values
 
@@ -199,6 +323,19 @@ spec:
 EOF
 ```
 
+**Note:** You can add or override attribute values in the values file using the `valuesObject` block. For example, to include a pullSecret in the WebSphere Secure custom resource, define it within the wsaSecure block as shown below.
+
+For a complete list of supported attributes in the different IBM WebSphere Automation custom resources, refer to the [IBM WebSphere Automation custom resource](https://www.ibm.com/docs/en/ws-automation?topic=automation-custom-resources) document.
+
+```bash
+valuesObject:
+  wsaSecure:
+    spec:
+      license:
+        accept: ${LICENSE_ACCEPT}
+      pullSecret: <value>  
+```      
+
 #### Example 2: Creating an instance of WebSphereSecure & WebSphereAutomation using pre-confgured values from a values file
 Set the necessary environment variables:
 ```bash
@@ -240,7 +377,8 @@ spec:
 EOF
 ```
 
-## Sync Applications
+
+### Sync Applications
 
 The ArgoCD applications created in the preceding steps should now exist on the ArgoCD Application UI. The applications can be synced via the `SYNC` button; starting with the ArgoCD Application, then WSA.
 
@@ -249,3 +387,20 @@ WSA will enter a `Progressing` state and will remain in that state until WSA is 
 Following a completed sync, the sync policy within the application can be updated to `Automated` via the App Details view. In this mode, any updates to the installation manifests at the source repository will be automatically synced to the cluster. Values set as overrides via `valuesObject` will continue to take precedence over the values file. 
 
 If WSA is to be later uninstalled, ensure to disable automatic sync before commencing the uninstall.
+
+### Verify your Installation
+
+You can verify your installation of IBM WebSphere Automation by following the post-installation steps outlined in this [documentation](https://www.ibm.com/docs/en/ws-automation?topic=installing-validating-installation). These steps help to validate the installation status of WebSphere Automation operator and the WebSphere Automation instance deployment.
+
+## Customized Installation
+
+This section provides guidance for users who want to host the GitOps repositories in their own Git systems and customize the deployment of IBM WebSphere Automation from their own repositories.
+
+To tailor a IBM WebSphere Automation deployment using your own Git repository, follow the steps outlined below.
+
+1. Fork the [IBM WebSphere Automation GitOps](https://github.com/IBM/ibm-websphere-automation/tree/main/gitops-deployment) repository to your own GitHub account.
+2. Define additional template files as needed. Any supplementary template files you add will be automatically detected and deployed by the Argo CD application during synchronization.
+3. Add environment-specific values files, such as for staging, production, or other deployment targets and include any custom attributes as needed.
+Then, configure the Argo CD application to reference the appropriate values file during deployment.
+
+Note: If you use a repository that is forked from the official [IBM WebSphere Automation GitOps repository](https://github.com/IBM/ibm-websphere-automation/tree/main/gitops-deployment), then you must update the values of the Repository URL and Revision parameters across the ArgoCD applications to match your repository and branch. For example, if you use `https://github.com/<myaccount>/ibm-websphere-automation` and `dev` branch, then these two parameters must be changed.
