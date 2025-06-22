@@ -23,16 +23,16 @@ certManagerNamespace: ibm-cert-manager
 wsaHealth:
   spec:
     license:
-      accept: true
+      accept: ''
 
 wsaSecure:
   spec:
     license:
-      accept: true      
+      accept: ''      
 
 wsa:
   spec:
     commonServices:
       registryNamespace: ''
     license:
-      accept: true
+      accept: ''
