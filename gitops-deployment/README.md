@@ -247,26 +247,25 @@ Create the following Argo CD Application to deploy IBM WebSphere Automation
 
 Four values files are available under /wsa path, with values.yaml being a configurable file and the rest 3 values files representing a supported configuration of the IBM WebSphere Automation custom resource (CR) installation:
 
-- `values.yaml`: A configurable values file for WSA.
-- `values.wsa-health.yaml`: This values file can be applied to create instances of WebSphereHealth, WebSphereSecure & WebSphereAutomation CRs on the cluster.
-- `values.wsa-secure.yaml`: This values file can be applied to create instances of WebSphereHealth & WebSphereSecure CRs on the cluster.
-- `values.wsa.yaml`: This values file can be applied to create an instance of WebSphereAutomation CR on the cluster.
+- `values-all-namespaces.yaml`: Installs the WebSphere Automation operator in AllNamespaces installation mode. Here the operator is installed inside the **openshift-operators** namespace, which makes the operator available across all namespaces, allowing you to deploy WebSphere Automation instances in any namespace within the cluster.
+- `values-own-namespace.yaml`: Installs the WebSphere Automation operator in OwnNamespace installation mode. Here both the operator and the WebSphere Automation instances are installed within the same namespace, referred to as WSA_INSTANCE_NAMESPACE.
+- `values-single-namespace.yaml`: Installs the WebSphere Automation operator in SingleNamespace installation mode. In this mode, WSA_OPERATOR_NAMESPACE and WSA_INSTANCE_NAMESPACE can be different.
 
-Each values file includes the attribute `gitops.namespaceScoped`, which is set to false by default. If the ArgoCD instance is deployed in namespace-scoped mode, this attribute **must** be set to true.
+Each values file includes the attribute `gitops.namespaceScoped`. When `gitops.namespaceScoped` is set to true, the namespace is excluded from GitOps management. This is necessary because a namespace-scoped ArgoCD instance cannot manage cluster-scoped resources such as namespaces, Custom Resource Definitions (CRDs), or ClusterRoles.
 
-When `gitops.namespaceScoped` is set to true, the namespace is excluded from GitOps management. This is necessary because a namespace-scoped ArgoCD instance cannot manage cluster-scoped resources such as namespaces, Custom Resource Definitions (CRDs), or ClusterRoles.
+Default values can be overridden, and additional attributes for the WebSphere Automation custom resources (CRs) can be specified using the `valuesObject` block, as detailed in the sections below.
 
-Default values can be overridden, and additional attributes for the Installation custom resource (CR) can be specified using the `valuesObject` block, as detailed in the sections below.
-
-#### Example 1: Creating an instance of WebSphereAutomation by providing custom values
+#### Example 1: Creating an instance of WebSphereSecure & WebSphereAutomation custom resources using SingleNamespace installation mode
 
 Set the necessary environment variables:
 ```bash
-export VALUES_FILE=values.yaml
-export WSA_NAMESPACE=<WSA namespace>
-export LICENSE_ACCEPT=true
+export VALUES_FILE=values-single-namespace.yaml
+export WSA_OPERATOR_NAMESPACE=<WSA Operator Namespace>
+export WSA_INSTANCE_NAMESPACE=<WSA Instance Namespace>
 export LICENSE_NAMESPACE=<IBM Licensing Namespace>
 export CERT_MANAGER_NAMESPACE=<Cert Manager Namespace>
+export GITOPS_NAMESPACE=<Gitops Namespace>
+export LICENSE_ACCEPT=true
 ```
 
 Create the application
@@ -276,7 +275,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: ibm-websphere-automation
-  namespace: openshift-gitops
+  namespace: ${GITOPS_NAMESPACE}
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
@@ -285,7 +284,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   destination:
-    namespace: websphere-automation
+    namespace: ${WSA_INSTANCE_NAMESPACE}
     server: 'https://kubernetes.default.svc'
   source:
     repoURL: 'https://github.com/IBM/ibm-websphere-automation'
@@ -295,9 +294,11 @@ spec:
       valueFiles:
         - ${VALUES_FILE}
       valuesObject:
+        operatorNamespace: ${WSA_OPERATOR_NAMESPACE}
+        commonServicesNamespace: ${WSA_OPERATOR_NAMESPACE}  
         subscription:
-          wsaOperatorNamespace: ${WSA_NAMESPACE}
-          wsaInstanceNamespace: ${WSA_NAMESPACE}
+          wsaOperatorNamespace: ${WSA_OPERATOR_NAMESPACE}
+          wsaInstanceNamespace: ${WSA_INSTANCE_NAMESPACE}
         wsaSecure:
           spec:
             license:
@@ -305,11 +306,9 @@ spec:
         wsa:
           spec:
             commonServices:
-              registryNamespace: ${WSA_NAMESPACE}
+              registryNamespace: ${WSA_OPERATOR_NAMESPACE}
             license:
               accept: ${LICENSE_ACCEPT}
-        operatorNamespace: ${WSA_NAMESPACE}
-        commonServicesNamespace: ${WSA_NAMESPACE}
         licensingNamespace: ${LICENSE_NAMESPACE}
         certManagerNamespace: ${CERT_MANAGER_NAMESPACE}
   syncPolicy:
@@ -336,10 +335,12 @@ valuesObject:
       pullSecret: <value>  
 ```      
 
-#### Example 2: Creating an instance of WebSphereSecure & WebSphereAutomation using pre-confgured values from a values file
+#### Example 2: Creating an instance of all three WebSphere Automation custom resources in OwnNamespace installation mode, using default configuration from the values file
 Set the necessary environment variables:
 ```bash
-export VALUES_FILE=values.wsa-secure.yaml
+export GITOPS_NAMESPACE=<Gitops Namespace>
+export WSA_INSTANCE_NAMESPACE=<WSA Instance Namespace>
+export VALUES_FILE=values-own-namespace.yaml
 ```
 Create the application
 ```bash
@@ -348,7 +349,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
   name: ibm-websphere-automation
-  namespace: openshift-gitops
+  namespace: ${GITOPS_NAMESPACE}
   finalizers:
     - resources-finalizer.argocd.argoproj.io
   labels:
@@ -357,7 +358,7 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   destination:
-    namespace: websphere-automation
+    namespace: ${WSA_INSTANCE_NAMESPACE}
     server: 'https://kubernetes.default.svc'
   source:
     repoURL: 'https://github.com/IBM/ibm-websphere-automation'
@@ -376,7 +377,6 @@ spec:
   project: default
 EOF
 ```
-
 
 ### Sync Applications
 
