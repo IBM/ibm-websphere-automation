@@ -1,7 +1,10 @@
+gitops:
+  namespaceScoped: true
+
 catalog:
   name: ibm-operator-catalog
   displayName: IBM operator Catalog
-  image: icr.io/cpopen/ibm-operator-catalog:v1.31
+  image: icr.io/cpopen/ibm-operator-catalog
 
 subscription:
   wsaOperatorNamespace: websphere-automation
@@ -9,17 +12,27 @@ subscription:
   installPlanApproval: Automatic
   wsaInstanceNamespace: websphere-automation
 
-wsa:
-  spec:
-    commonServices:
-      registryNamespace: websphere-automation
-    license:
-      accept: true
-
 operatorNamespace: websphere-automation
 
 commonServicesNamespace: websphere-automation
 
 licensingNamespace: ibm-licensing
 
-certManagerNamespace: cert-manager-operator
+certManagerNamespace: ibm-cert-manager
+
+wsaHealth:
+  spec:
+    license:
+      accept: true
+
+wsaSecure:
+  spec:
+    license:
+      accept: true      
+
+wsa:
+  spec:
+    commonServices:
+      registryNamespace: websphere-automation
+    license:
+      accept: true
