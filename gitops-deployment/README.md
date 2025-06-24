@@ -48,8 +48,11 @@ metadata:
   name: gitops-websphere-automation-role
   namespace: ${WSA_NAMESPACE}
 rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["automation.websphere.ibm.com"]
-    resources: ["WebSphereHealth", "WebSphereSecure", "WebSphereAutomation"]
+    resources: ["websphereautomations", "webspheresecures", "webspherehealths"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 EOF
 ```
@@ -65,10 +68,13 @@ metadata:
   namespace: ${WSA_NAMESPACE}
 rules:
   - apiGroups: ["operators.coreos.com"]
-    resources: ["operatorgroups", "catalogsources"]
+    resources: ["operatorgroups", "subscriptions", "catalogsources"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["networkpolicies"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["automation.websphere.ibm.com"]
-    resources: ["WebSphereHealth", "WebSphereSecure", "WebSphereAutomation"]
+    resources: ["websphereautomations", "webspheresecures", "webspherehealths"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 EOF
 ```
@@ -139,7 +145,7 @@ spec:
     server: 'https://kubernetes.default.svc'
   source:
     repoURL: ${SOURCE_REPOSITORY}
-    path: argocd
+    path: gitops-deployment/argocd
     targetRevision: ${TARGET_REVISION}
     helm:
       valuesObject:
@@ -186,7 +192,7 @@ spec:
     server: 'https://kubernetes.default.svc'
   source:
     repoURL: ${SOURCE_REPOSITORY}
-    path: licensing
+    path: gitops-deployment/licensing
     targetRevision: ${TARGET_REVISION}
   syncPolicy:
     retry:
@@ -228,7 +234,7 @@ spec:
     server: 'https://kubernetes.default.svc'
   source:
     repoURL: ${SOURCE_REPOSITORY}
-    path: cert-manager
+    path: gitops-deployment/cert-manager
     targetRevision: ${TARGET_REVISION}
   syncPolicy:
     retry:
@@ -260,6 +266,8 @@ Default values can be overridden, and additional attributes for the WebSphere Au
 Set the necessary environment variables:
 ```bash
 export VALUES_FILE=values-single-namespace.yaml
+export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
+export TARGET_REVISION=<release-version>
 export WSA_OPERATOR_NAMESPACE=<WSA Operator Namespace>
 export WSA_INSTANCE_NAMESPACE=<WSA Instance Namespace>
 export LICENSE_NAMESPACE=<IBM Licensing Namespace>
@@ -287,9 +295,9 @@ spec:
     namespace: ${WSA_INSTANCE_NAMESPACE}
     server: 'https://kubernetes.default.svc'
   source:
-    repoURL: 'https://github.com/IBM/ibm-websphere-automation'
+    repoURL: ${SOURCE_REPOSITORY}
     path: gitops-deployment/wsa
-    targetRevision: main
+    targetRevision: ${TARGET_REVISION}
     helm:
       valueFiles:
         - ${VALUES_FILE}
@@ -339,6 +347,8 @@ valuesObject:
 Set the necessary environment variables:
 ```bash
 export GITOPS_NAMESPACE=<Gitops Namespace>
+export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
+export TARGET_REVISION=<release-version>
 export WSA_INSTANCE_NAMESPACE=<WSA Instance Namespace>
 export VALUES_FILE=values-own-namespace.yaml
 ```
@@ -361,9 +371,9 @@ spec:
     namespace: ${WSA_INSTANCE_NAMESPACE}
     server: 'https://kubernetes.default.svc'
   source:
-    repoURL: 'https://github.com/IBM/ibm-websphere-automation'
+    repoURL: ${SOURCE_REPOSITORY}
     path: gitops-deployment/wsa
-    targetRevision: main
+    targetRevision: ${TARGET_REVISION}
     helm:
       valueFiles:
         - ${VALUES_FILE}
