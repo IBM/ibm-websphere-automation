@@ -35,8 +35,19 @@ The Role and RoleBinding examples provided below may be used to grant these addi
 ```bash
 export GITOPS_NAMESPACE=openshift-gitops
 export GITOPS_SERVICEACCOUNT=openshift-gitops-argocd-application-controller
-export WSA_NAMESPACE=websphere-automation
+export NAMESPACE=websphere-automation
 ```
+
+**Note:**
+
+For AllNamespaces mode of operator installation, create the Role & RoleBinding in the following namespaces, in addition to the namespace where WSA instance is deployed.
+- ibm-common-services
+-  ibm-cert-manager
+-  ibm-licensing
+
+For OwnNamespace and SingleNamespace, make sure to create the Role & RoleBinding in the following namespaces, in addition to the namespace where WSA instance is deployed.
+- ibm-cert-manager
+- ibm-licensing
 
 #### The GitOps ArgoCD instance is deployed in cluster-wide mode:
 
@@ -46,7 +57,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gitops-websphere-automation-role
-  namespace: ${WSA_NAMESPACE}
+  namespace: ${NAMESPACE}
 rules:
   - apiGroups: ["networking.k8s.io"]
     resources: ["networkpolicies"]
@@ -65,7 +76,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: gitops-websphere-automation-role
-  namespace: ${WSA_NAMESPACE}
+  namespace: ${NAMESPACE}
 rules:
   - apiGroups: ["operators.coreos.com"]
     resources: ["operatorgroups", "subscriptions", "catalogsources"]
@@ -87,7 +98,7 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: gitops-websphere-automation-rolebinding
-  namespace: ${WSA_NAMESPACE}
+  namespace: ${NAMESPACE}
 subjects:
 - kind: ServiceAccount
   name: ${GITOPS_SERVICEACCOUNT}
@@ -251,7 +262,7 @@ EOF
  
 Create the following Argo CD Application to deploy IBM WebSphere Automation
 
-Four values files are available under /wsa path, with values.yaml being a configurable file and the rest 3 values files representing a supported configuration of the IBM WebSphere Automation custom resource (CR) installation:
+There are three values files available under the /wsa path, with each values file representing a supported installation mode for IBM WebSphere Automation operator installation:
 
 - `values-all-namespaces.yaml`: Installs the WebSphere Automation operator in AllNamespaces installation mode. Here the operator is installed inside the **openshift-operators** namespace, which makes the operator available across all namespaces, allowing you to deploy WebSphere Automation instances in any namespace within the cluster.
 - `values-own-namespace.yaml`: Installs the WebSphere Automation operator in OwnNamespace installation mode. Here both the operator and the WebSphere Automation instances are installed within the same namespace, referred to as WSA_INSTANCE_NAMESPACE.
