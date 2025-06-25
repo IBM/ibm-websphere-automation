@@ -16,9 +16,9 @@ operatorNamespace: ''
 
 commonServicesNamespace: ''
 
-licensingNamespace: ibm-licensing
+licensingNamespace: ''
 
-certManagerNamespace: ibm-cert-manager
+certManagerNamespace: ''
 
 wsaHealth:
   spec:
