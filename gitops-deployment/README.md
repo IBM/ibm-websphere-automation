@@ -32,22 +32,19 @@ The service account used by the GitOps Application Controller will require eleva
 
 The Role and RoleBinding examples provided below may be used to grant these additional permissions. However, it is strongly recommended that a cluster administrator carefully review and validate these permissions before applying them.
 
+**Note:**
+
+For OwnNamespace installation, make sure to create the Role & RoleBinding in the following namespaces, in addition to the namespace where WSA instance is deployed.
+- ibm-cert-manager
+- ibm-licensing
+
+For SingleNamespace installation, make sure to create the Role & RoleBinding in the namespace where WSA instance, cert manger & licensing operator is deployed.
+
 ```bash
 export GITOPS_NAMESPACE=openshift-gitops
 export GITOPS_SERVICEACCOUNT=openshift-gitops-argocd-application-controller
 export NAMESPACE=websphere-automation
 ```
-
-**Note:**
-
-For AllNamespaces mode of operator installation, create the Role & RoleBinding in the following namespaces, in addition to the namespace where WSA instance is deployed.
-- ibm-common-services
--  ibm-cert-manager
--  ibm-licensing
-
-For OwnNamespace and SingleNamespace, make sure to create the Role & RoleBinding in the following namespaces, in addition to the namespace where WSA instance is deployed.
-- ibm-cert-manager
-- ibm-licensing
 
 #### The GitOps ArgoCD instance is deployed in cluster-wide mode:
 
@@ -123,7 +120,7 @@ This section describes the Argo CD Applications that will be synchronized in the
 When configuring Argo CD applications:
 
 - Set the SOURCE_REPOSITORY to the GitHub repository containing the Helm Chart Templates.
-- Set the TARGET_REVISION to the branch name that corresponds to the desired IBM WebSphere Automation version (e.g., use 1.9.0 for WSA version 1.9.0).
+- Set the TARGET_REVISION to the branch name that corresponds to the desired IBM WebSphere Automation version (e.g., use 1.8.2 for WebSphere Automation v1.8.2).
 - Set the GITOPS_NAMESPACE to namespace in which the ArgoCD instance is deployed.
 
 #### Argo CD Custom Health Checks
@@ -262,13 +259,10 @@ EOF
  
 Create the following Argo CD Application to deploy IBM WebSphere Automation
 
-There are three values files available under the /wsa path, with each values file representing a supported installation mode for IBM WebSphere Automation operator installation:
+There are two values files available under the /wsa path, with each values file representing a supported installation mode for IBM WebSphere Automation operator installation via ArgoCD:
 
-- `values-all-namespaces.yaml`: Installs the WebSphere Automation operator in AllNamespaces installation mode. Here the operator is installed inside the **openshift-operators** namespace, which makes the operator available across all namespaces, allowing you to deploy WebSphere Automation instances in any namespace within the cluster.
 - `values-own-namespace.yaml`: Installs the WebSphere Automation operator in OwnNamespace installation mode. Here both the operator and the WebSphere Automation instances are installed within the same namespace, referred to as WSA_INSTANCE_NAMESPACE.
 - `values-single-namespace.yaml`: Installs the WebSphere Automation operator in SingleNamespace installation mode. In this mode, WSA_OPERATOR_NAMESPACE and WSA_INSTANCE_NAMESPACE can be different.
-
-Each values file includes the attribute `gitops.namespaceScoped`. When `gitops.namespaceScoped` is set to true, the namespace is excluded from GitOps management. This is necessary because a namespace-scoped ArgoCD instance cannot manage cluster-scoped resources such as namespaces, Custom Resource Definitions (CRDs), or ClusterRoles.
 
 Default values can be overridden, and additional attributes for the WebSphere Automation custom resources (CRs) can be specified using the `valuesObject` block, as detailed in the sections below.
 
