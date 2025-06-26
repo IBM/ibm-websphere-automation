@@ -120,7 +120,7 @@ This section describes the Argo CD Applications that will be synchronized in the
 When configuring Argo CD applications:
 
 - Set the SOURCE_REPOSITORY to the GitHub repository containing the Helm Chart Templates.
-- Set the TARGET_REVISION to the branch name that corresponds to the desired IBM WebSphere Automation version (e.g., use 1.8.2 for WebSphere Automation v1.8.2).
+- Set the TARGET_REVISION to the branch name that corresponds to the desired IBM WebSphere Automation version (e.g., use **v1.9.0** for WebSphere Automation 1.9.0).
 - Set the GITOPS_NAMESPACE to namespace in which the ArgoCD instance is deployed.
 
 #### Argo CD Custom Health Checks
@@ -215,7 +215,7 @@ EOF
 
 #### IBM Cert Manager
 
-Skip this step if you already have a certificate manager installed on the Red Hat OpenShift cluster that you are installing IBM WebSphere Automation on. If you do not have a certificate manager then you must install one. 
+Skip this step if you already have IBM Cert Manager or Red Hat Cert Manager installed on the Red Hat OpenShift cluster that you are installing IBM WebSphere Automation on. If you do not have a certificate manager then you must install one. 
 
 Create the following ArgoCD Application to deploy the IBM Certificate Manager.
 
@@ -259,18 +259,18 @@ EOF
  
 Create the following Argo CD Application to deploy IBM WebSphere Automation
 
-There are two values files available under the /wsa path, with each values file representing a supported installation mode for IBM WebSphere Automation operator installation via ArgoCD:
+There are two values files available under the /wsa path, any of the these values files can be used to deploy WSA via ArgoCD.
 
-- `values-own-namespace.yaml`: Installs the WebSphere Automation operator in OwnNamespace installation mode. Here both the operator and the WebSphere Automation instances are installed within the same namespace, referred to as WSA_INSTANCE_NAMESPACE.
-- `values-single-namespace.yaml`: Installs the WebSphere Automation operator in SingleNamespace installation mode. In this mode, WSA_OPERATOR_NAMESPACE and WSA_INSTANCE_NAMESPACE can be different.
+- `values-own-namespace.yaml`: A values file with values already pre-configured and installs the WebSphere Automation operator in OwnNamespace installation mode. Here both the operator and the WebSphere Automation instances are installed within the same namespace.
+- `values.yaml`: Defines configurable parameters for deploying WSA.
 
 Default values can be overridden, and additional attributes for the WebSphere Automation custom resources (CRs) can be specified using the `valuesObject` block, as detailed in the sections below.
 
-#### Example 1: Creating an instance of WebSphereSecure & WebSphereAutomation custom resources using SingleNamespace installation mode
+#### Example 1: Creating an instance of WebSphereSecure & WebSphereAutomation custom resources using values.yaml
 
 Set the necessary environment variables:
 ```bash
-export VALUES_FILE=values-single-namespace.yaml
+export VALUES_FILE=values.yaml
 export SOURCE_REPOSITORY=https://github.com/IBM/ibm-websphere-automation
 export TARGET_REVISION=<release-version>
 export WSA_OPERATOR_NAMESPACE=<WSA Operator Namespace>
