@@ -8,7 +8,7 @@ catalog:
 
 subscription:
   wsaOperatorNamespace: ''
-  channel: v1.8
+  channel: v1.9
   installPlanApproval: Automatic
   wsaInstanceNamespace: ''
 
