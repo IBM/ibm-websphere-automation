@@ -18,6 +18,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
   - [Sync Applications](#sync-applications)
   - [Verify your Installation](#verify-your-installation)
 - [Customised Installation](#customized-installation)
+- [Known Limitations](#known-limitations)
 
 ## Prerequisites
 
@@ -419,3 +420,9 @@ To tailor a IBM WebSphere Automation deployment using your own Git repository, f
 Then, configure the Argo CD application to reference the appropriate values file during deployment.
 
 Note: If you use a repository that is forked from the official [IBM WebSphere Automation GitOps repository](https://github.com/IBM/ibm-websphere-automation/tree/main/gitops-deployment), then you must update the values of the Repository URL and Revision parameters across the ArgoCD applications to match your repository and branch. For example, if you use `https://github.com/<myaccount>/ibm-websphere-automation` and `dev` branch, then these two parameters must be changed.
+
+## Known Limitations
+
+1. CPFS upgrades are not handled by WSA's helm charts and will need to be handled outside of Gitops deployment, by running the upgrade script provided [here](https://github.com/IBM/ibm-websphere-automation/blob/gitops-enhancement/scripts/upgrade-cpfs.sh).
+
+2. AllNamespaces mode of deployment is currently not supported at the moment with the configuration available in the values file.
