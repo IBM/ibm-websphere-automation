@@ -1,4 +1,4 @@
-{{- if eq .Values.subscription.wsaOperatorNamespace .Values.subscription.wsaInstanceNamespace}}
+{{- if .Values.gitops.namespaceScoped}}
 apiVersion: operators.coreos.com/v1alpha2
 kind: OperatorGroup
 metadata:
