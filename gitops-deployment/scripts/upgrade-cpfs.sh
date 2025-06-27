@@ -7,8 +7,6 @@
 #
 # (C) Copyright IBM Corp. 2025
 #
-
-#
 # The source code for this program is not published or otherwise
 # divested of its trade secrets, irrespective of what has been
 # deposited with the U.S. Copyright Office.
@@ -31,32 +29,26 @@
 #   This script upgrades IBM Cloud Pak foundational services 4.x to a newer version.
 #
 #   This script contains the following parameters:
+#   
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") are.
+#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) is installed.
+#   
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.9.0") that is targeted for upgrade.
 #       --common-services-catalog-source $COMMON_SERVICES_CATALOG_SOURCE - the catalog source name for IBM Cloud Pak foundational services (Common Services). Defaults to ibm-operator-catalog.
-#       --common-services-case-version $COMMON_SERVICES_CASE_VERSION - Case version of IBM Cloud Pak foundational services (Common Services) is installed. Defaults to 4.12.0.
 #       --all-namespaces - only declare when you will be installing IBM WebSphere Automation Operator in AllNamespaces install mode.
-#       --patch-catalog-sources - only declare if you want to patch catalog sources to the newest version automatically through the script.
 # 
 #   Usage:
-#       ./update-cpfs.sh --instance-namespace <WSA_INSTANCE_NAMESPACE>
-#                         [--websphere-automation-version <WSA_VERSION_NUMBER>]
-#                         [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
-#                         [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
-#                         [--all-namespaces]
-#                         [--patch-catalog-sources]
-#  
+#       ./update-cpfs.sh --instance-namespace <WSA_INSTANCE_NAMESPACE> --common-services-case-version <COMMON_SERVICES_CASE_VERSION>
+#                       [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
+#                       [--all-namespaces]
 #-------------------------------------------------------------------------------------------------------
 
 
 readonly usage="Usage: $0  --instance-namespace <WSA_INSTANCE_NAMESPACE>
-                          [--websphere-automation-version <WSA_VERSION_NUMBER>]
-                          [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
-                          [--common-services-case-version <COMMON_SERVICES_CASE_VERSION>]
-                          [--all-namespaces]
-                          [--patch-catalog-sources]"
+                           --common-services-case-version <COMMON_SERVICES_CASE_VERSION>
+                           [--common-services-catalog-source <COMMON_SERVICES_CATALOG_SOURCE>]
+                           [--all-namespaces]"
 
 set -o pipefail
 
@@ -102,23 +94,16 @@ parse_args() {
                 shift
                 readonly WSA_INSTANCE_NAMESPACE="${1}"
                 ;;
-            --websphere-automation-version)
+             --common-services-case-version)
                 shift
-                readonly WSA_VERSION_NUMBER="${1}"
-                ;;
+                readonly COMMON_SERVICES_CASE_VERSION="${1}"
+                ;;    
             --common-services-catalog-source)
                 shift
                 readonly COMMON_SERVICES_CATALOG_SOURCE="${1}"
                 ;;
-            --common-services-case-version)
-                shift
-                readonly COMMON_SERVICES_CASE_VERSION="${1}"
-                ;;
             --all-namespaces)
                 readonly INSTALL_MODE="AllNamespaces"
-                ;;
-            --patch-catalog-sources)
-                readonly PATCH_CATALOG_SOURCES="true"
                 ;;
             *)
                 echo "Error: Invalid argument - ${1}"
@@ -138,19 +123,6 @@ check_args() {
         exit 1
     fi
 
-    if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.9.0."
-        WSA_VERSION_NUMBER="1.9.0"
-    else
-        IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
-        if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.9.0'."
-            echo ""
-            echo "${usage}"
-            exit 1
-        fi
-    fi
-
     if [[ -z "${INSTALL_MODE}" ]]; then
         echo "==> Install mode not set. Setting as OwnNamespace mode."
         INSTALL_MODE="OwnNamespace"
@@ -161,36 +133,13 @@ check_args() {
         WSA_OPERATOR_NAMESPACE="openshift-operators"
     fi
 
-    if [[ -z "${PATCH_CATALOG_SOURCES}" ]]; then
-        PATCH_CATALOG_SOURCES="false"
-    fi
-
     if [[ -z "${COMMON_SERVICES_CATALOG_SOURCE}" ]]; then
         echo "==> Common Services CatalogSource not set. Setting as ibm-operator-catalog."
-        COMMON_SERVICES_CATALOG_SOURCE="ibm-operator-catalog"
+    COMMON_SERVICES_CATALOG_SOURCE="ibm-operator-catalog"
         check_catalog_source "$COMMON_SERVICES_CATALOG_SOURCE"
     elif [[ "${COMMON_SERVICES_CATALOG_SOURCE}" != "ibm-operator-catalog" ]]; then
         # Validate whether or not all the required catalog sources exist
         check_catalog_source "$COMMON_SERVICES_CATALOG_SOURCE"
-    fi
-
-    if [[ -z "${COMMON_SERVICES_CASE_VERSION}" ]]; then
-        # Check operator versions that might require using older Common Services case versions
-        if [[ "${WSA_VERSION_NUMBER}" == "1.7.0" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.7.2" ]]; then
-            COMMON_SERVICES_CASE_VERSION=4.4.0
-        elif [[ "${WSA_VERSION_NUMBER}" == "1.7.3" ]]; then
-            COMMON_SERVICES_CASE_VERSION=4.6.4
-        elif [[ "${WSA_VERSION_NUMBER}" == "1.7.4" ]]; then
-            COMMON_SERVICES_CASE_VERSION=4.8.0
-        elif [[ "${WSA_VERSION_NUMBER}" == "1.7.5" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.8.0" ]]; then
-            COMMON_SERVICES_CASE_VERSION=4.9.0
-        elif [[ "${WSA_VERSION_NUMBER}" == "1.8.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.8.2" ]]; then
-            COMMON_SERVICES_CASE_VERSION=4.10.0    
-        else
-            # Otherwise, use the latest CPFS version WSA supports
-            COMMON_SERVICES_CASE_VERSION=4.12.0
-        fi
-        echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     fi
 
     echo "***********************************************************************"
@@ -198,7 +147,6 @@ check_args() {
     echo "      Install mode: ${INSTALL_MODE}"
     echo "      WebSphere Automation operator namespace: ${WSA_OPERATOR_NAMESPACE}"
     echo "      WebSphere Automation instance namespace: ${WSA_INSTANCE_NAMESPACE}"
-    echo "      WebSphere Automation version: ${WSA_VERSION_NUMBER}"
     echo "      Common Services CatalogSource: ${COMMON_SERVICES_CATALOG_SOURCE}"
     echo "      Common Services case version: ${COMMON_SERVICES_CASE_VERSION}"
     echo "***********************************************************************"
