@@ -28,8 +28,7 @@
 # Upgrades IBM Cloud Pak foundational services 4.x to a newer version
 #-------------------------------------------------------------------------------------------------------
 #
-#   This script upgrades upgrades IBM Cert Manager and IBM Licensing operators,
-#   and IBM Cloud Pak foundational services 4.x to a newer version.
+#   This script upgrades IBM Cloud Pak foundational services 4.x to a newer version.
 #
 #   This script contains the following parameters:
 #   Required parameters:
