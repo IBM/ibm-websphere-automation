@@ -2,9 +2,9 @@ gitops:
   namespaceScoped: true
 
 catalog:
-  name: ibm-operator-catalog
-  displayName: IBM operator Catalog
-  image: icr.io/cpopen/ibm-operator-catalog
+  name: websphere-automation-catalog
+  displayName: IBM WebSphere Automation Catalog
+  image: icr.io/websphere-automation/cp/websphere-automation-operator-catalog:1.8.2-rc.1
 
 subscription:
   wsaOperatorNamespace: websphere-automation
