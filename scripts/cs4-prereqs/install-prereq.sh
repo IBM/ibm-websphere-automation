@@ -142,12 +142,12 @@ check_args() {
     fi
 
     if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.8.2."
-        WSA_VERSION_NUMBER="1.8.2"
+        echo "==> WebSphere Automation version not set. Setting as 1.9.0"
+        WSA_VERSION_NUMBER="1.9.0"
     else
         IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.8.2'."
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.9.0'."
             echo ""
             echo "${usage}"
             exit 1
@@ -178,12 +178,14 @@ check_args() {
 
     if [[ -z "${CERT_MANAGER_CATALOG_SOURCE}" ]]; then
         echo "==> Cert Manager CatalogSource not set. Setting as ibm-cert-manager-catalog."
-        CERT_MANAGER_CATALOG_SOURCE="ibm-cert-manager-catalog"
+        check_for_default_catalog_source "ibm-cert-manager-catalog" "ibm-operator-catalog"
+        CERT_MANAGER_CATALOG_SOURCE=$default
     fi
 
     if [[ -z "${LICENSING_SERVICE_CATALOG_SOURCE}" ]]; then
         echo "==> Licensing Service CatalogSource not set. Setting as ibm-licensing-catalog."
-        LICENSING_SERVICE_CATALOG_SOURCE="ibm-licensing-catalog"
+        check_for_default_catalog_source "ibm-licensing-catalog" "ibm-operator-catalog"
+        LICENSING_SERVICE_CATALOG_SOURCE=$default
     fi
 
     if [[ -z "${COMMON_SERVICES_CATALOG_SOURCE}" ]]; then
@@ -207,9 +209,11 @@ check_args() {
             COMMON_SERVICES_CASE_VERSION=4.8.0
         elif [[ "${WSA_VERSION_NUMBER}" == "1.7.5" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.8.0" ]]; then
             COMMON_SERVICES_CASE_VERSION=4.9.0
+        elif [[ "${WSA_VERSION_NUMBER}" == "1.8.1" ]] || [[ "${WSA_VERSION_NUMBER}" == "1.8.2" ]]; then
+            COMMON_SERVICES_CASE_VERSION=4.10.0
         else
             # Otherwise, use the latest version
-            COMMON_SERVICES_CASE_VERSION=4.10.0
+            COMMON_SERVICES_CASE_VERSION=4.12.0
         fi
         echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     fi
@@ -340,6 +344,34 @@ wait_for_operator() {
     local error_message="The operator ${operator_name} does not exist."
 
     wait_for_condition "${condition}" "${target}" "${comp_operator}" "${wait_message}" "${error_message}"
+}
+
+check_for_default_catalog_source() {
+    local current_source=$1
+    local backup_source=$2
+
+    local wait_message="Waiting for CatalogSource '${current_source}' to be present..."
+    local total_retries=10
+    local retries=1
+
+    while true
+    do
+        echo "==> ${wait_message} (retry ${retries}/${total_retries})"
+        result=$(eval "oc get catalogsource -n openshift-marketplace -o name | grep ${current_source} -c")
+
+        if [[ $(($result)) -eq 1 ]]; then
+            default=$current_source
+            break;
+        fi
+
+        ((retries+=1))
+        if (( retries >= total_retries )); then
+            echo "The CatalogSource '${current_source}' does not exist, using ${backup_source} instead."
+            default=$backup_source
+            break
+        fi
+        sleep 10
+    done
 }
 
 main() {
