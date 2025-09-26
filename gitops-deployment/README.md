@@ -18,6 +18,7 @@ For more information about ArgoCD, see the [ArgoCD documentation](https://argo-c
   - [Sync Applications](#sync-applications)
   - [Verify your Installation](#verify-your-installation)
 - [Customised Installation](#customized-installation)
+- [Upgrading IBM Cloud Pak Foundational Services](#upgrading-ibm-cloud-pak-foundational-services)
 - [Known Limitations](#known-limitations)
 
 ## Prerequisites
@@ -421,8 +422,57 @@ Then, configure the Argo CD application to reference the appropriate values file
 
 Note: If you use a repository that is forked from the official [IBM WebSphere Automation GitOps repository](https://github.com/IBM/ibm-websphere-automation/tree/main/gitops-deployment), then you must update the values of the Repository URL and Revision parameters across the ArgoCD applications to match your repository and branch. For example, if you use `https://github.com/<myaccount>/ibm-websphere-automation` and `dev` branch, then these two parameters must be changed.
 
+## Upgrading IBM Cloud Pak Foundational Services
+
+Before upgrading WSA to a newer version, make sure to check if the CPFS version which is currently installed in the environment is supported by WSA. Otherwise WSA installation won't succeed.
+
+CPFS version upgrades are not handled by WSA's helm charts and will need to be handled outside of GitOps deployment. Follow either UI or CLI instructions to update CPFS version to a minimum supported version of CPFS before upgrading WSA. Please check the matrix below see which version of CPFS is supported on WSA.
+
+| IBM WebSphere Automation Version | Supported CPFS Versions | 
+| -------------------------------- | ----------------------- |
+| v1.8.2                           | 4.9.0, 4.10.0           |
+| v1.9.0                           | 4.10.0, 4.11.0, 4.12.0  |
+| v1.10.0                          | 4.12.0, 4.13.0, 4.14.0  |
+
+### UI Steps:
+1. From OCP console, navigate to Operators > Installed Operators > IBM Cloud Pak foundational services
+2. Within the Subscription tab, click the Upgrade channel link to change the Subscription Update Channel to suitable version supported by WSA.
+
+### CLI Steps:
+1. Login to your cluster using **oc login** command
+2. Run the following command to list the upgrade channels
+    ```bash
+    oc get packagemanifest -n ibm-common-services ibm-common-service-operator -o=jsonpath='{.status.channels[*].name}'
+    ```
+3. Run the following command to find the subscription name for IBM Cloud Pak foundational services
+    ```bash
+    oc get sub -n websphere-automation | grep ibm-common-service-operator
+    ```
+4. Patch the Subscription to move to the desired update channel
+    ```bash
+    oc patch subscription ibm-common-service-operator-v4.xx-websphere-automation-catalog-openshift-marketplace -n websphere-automation --patch '{"spec":{"channel":"v4.12"}}' --type=merge
+    ```
+
 ## Known Limitations
 
-1. CPFS upgrades are not handled by WSA's helm charts and will need to be handled outside of Gitops deployment, by running the upgrade script provided [here](https://github.com/IBM/ibm-websphere-automation/blob/gitops-enhancement/scripts/upgrade-cpfs.sh).
+1. CPFS version upgrades are not handled by WSA's helm charts and will need to be handled outside of GitOps deployment. Follow the instructions from [Upgrading IBM Cloud Pak Foundational Services](#upgrading-ibm-cloud-pak-foundational-services)
 
 2. AllNamespaces mode of deployment is currently not supported at the moment with the configuration available in the values file.
+
+3. If ArgoCD was not setup using OpenShift GitOps or the ArgoCD operator, then [Argo CD Custom Health Check app](#argo-cd-custom-health-checks) cannot be deployed sucessfully. This is due to the fact that [upstream repository](https://github.com/argoproj/argo-cd/tree/release-2.11/manifests/crds) for Core ArgoCD doesn't include ArgoCD CRD. In this situation the [argocd.yaml](argocd/templates/argocd.yaml) in our Git repository (which creates an ArgoCD resource) cannot be applied. The main intent of the [Argo CD Custom Health Check app](#argo-cd-custom-health-checks) in WSA's Git repository is to serve as a health check app, monitoring the catalog sources and CRs of WSA. This same outcome can be achieved without deploying this app from WSA's Git repo — instead, we can add the health checks directly into the **argocd-cm** ConfigMap.
+
+    To apply the health checks to the argocd-cm ConfigMap, you can use the following commands:
+
+    ```bash
+    # Replace 'argocd' with your ArgoCD namespace if different
+    export ARGOCD_NAMESPACE=argocd
+
+    # First, back up the existing ConfigMap
+    echo "Backing up existing ConfigMap..."
+    oc get configmap argocd-cm -n $ARGOCD_NAMESPACE -o yaml > argocd-cm-backup.yaml
+
+    # Apply patch-custom-health-check.yaml to patch the argocd-cm ConfigMap
+    oc patch configmap argocd-cm -n $ARGOCD_NAMESPACE --type=merge --patch-file patch-custom-health-check.yaml
+    ```
+
+    After applying the ConfigMap changes, sync all the apps from ArgoCD UI.
