@@ -41,7 +41,7 @@
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") will be created.
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.10.0") that is targeted for installation.
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.11.0") that is targeted for installation.
 #       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator will be installed. Defaults to ibm-cert-manager.
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator will be installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
@@ -142,12 +142,12 @@ check_args() {
     fi
 
     if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.10.0"
-        WSA_VERSION_NUMBER="1.10.0"
+        echo "==> WebSphere Automation version not set. Setting as 1.11.0"
+        WSA_VERSION_NUMBER="1.11.0"
     else
         IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.10.0'."
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.11.0'."
             echo ""
             echo "${usage}"
             exit 1
@@ -213,9 +213,11 @@ check_args() {
             COMMON_SERVICES_CASE_VERSION=4.10.0
         elif [[ "${WSA_VERSION_NUMBER}" == "1.9.0" ]]; then
             COMMON_SERVICES_CASE_VERSION=4.12.0
+        elif [[ "${WSA_VERSION_NUMBER}" == "1.10.0" ]]; then
+            COMMON_SERVICES_CASE_VERSION=4.14.0
         else
             # Otherwise, use the latest version
-            COMMON_SERVICES_CASE_VERSION=4.14.0
+            COMMON_SERVICES_CASE_VERSION=4.15.0
         fi
         echo "==> Common Services case version is not set. Setting as ${COMMON_SERVICES_CASE_VERSION}."
     fi
