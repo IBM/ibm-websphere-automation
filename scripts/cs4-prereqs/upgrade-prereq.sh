@@ -5,7 +5,7 @@
 # OCO Source Materials
 # 5900-AH1
 #
-# (C) Copyright IBM Corp. 2024, 2025
+# (C) Copyright IBM Corp. 2024, 2026
 #
 
 #
@@ -35,7 +35,7 @@
 #   Required parameters:
 #       --instance-namespace $WSA_INSTANCE_NAMESPACE - the namespace where the instance of WebSphere Automation custom resources (CR) (i.e "WebSphereAutomation") are.
 #   Optional parameters:
-#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.11.0") that is targeted for upgrade.
+#       --websphere-automation-version $WSA_VERSION_NUMBER - the semantic version of WebSphere Automation operator (i.e. "1.11.1") that is targeted for upgrade.
 #       --cert-manager-namespace $CERT_MANAGER_NAMESPACE - the namespace where IBM Cert Manager operator is installed. Defaults to ibm-cert-manager.
 #       --licensing-service-namespace $LICENSING_SERVICE_NAMESPACE - the namespace where IBM Licensing operator is installed. Defaults to ibm-licensing.
 #       --cert-manager-catalog-source $CERT_MANAGER_CATALOG_SOURCE - the catalog source name for IBM Cert Manager operator. Defaults to ibm-cert-manager-catalog.
@@ -168,12 +168,12 @@ check_args() {
     fi
 
     if [[ -z "${WSA_VERSION_NUMBER}" ]]; then
-        echo "==> WebSphere Automation version not set. Setting as 1.11.0."
-        WSA_VERSION_NUMBER="1.11.0"
+        echo "==> WebSphere Automation version not set. Setting as 1.11.1."
+        WSA_VERSION_NUMBER="1.11.1"
     else
         IFS='.' read -r -a semVersionArray <<< "${WSA_VERSION_NUMBER}"
         if [[ "${#semVersionArray[@]}" != "3" ]]; then
-            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.11.0'."
+            echo "==> Error: You must provide the WebSphere Automation version in semantic version format, such as '1.11.1'."
             echo ""
             echo "${usage}"
             exit 1
