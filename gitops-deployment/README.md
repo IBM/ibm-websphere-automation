@@ -434,6 +434,7 @@ CPFS version upgrades are not handled by WSA's helm charts and will need to be h
 | v1.9.0                           | 4.10.0, 4.11.0, 4.12.0  |
 | v1.10.0                          | 4.12.0, 4.13.0, 4.14.0  |
 | v1.11.0                          | 4.14.0, 4.15.0          |
+| v1.11.1                          | 4.14.0, 4.15.0          |
 
 ### UI Steps:
 1. From OCP console, navigate to Operators > Installed Operators > IBM Cloud Pak foundational services
