@@ -257,6 +257,12 @@ spec:
 EOF
 ```
 
+#### Network Policies for Red Hat Cert Manager
+
+The cert-manager Operator for Red Hat OpenShift provides predefined NetworkPolicy resources to enhance security. By default, this feature is disabled. To use it, enable it in the CertManager custom resource (CR).
+
+For network policies for Red Hat cert-manager, follow the instructions from Red Hat documentation: [cert-manager Network Policy](https://docs.redhat.com/en/documentation/openshift_container_platform/4.17/html/security_and_compliance/cert-manager-operator-for-red-hat-openshift#cert-manager-nw-policy)
+
 #### IBM WebSphere Automation
  
 Create the following Argo CD Application to deploy IBM WebSphere Automation
@@ -435,6 +441,7 @@ CPFS version upgrades are not handled by WSA's helm charts and will need to be h
 | v1.10.0                          | 4.12.0, 4.13.0, 4.14.0  |
 | v1.11.0                          | 4.14.0, 4.15.0          |
 | v1.11.1                          | 4.14.0, 4.15.0          |
+| v1.12.0                          | 4.15.0, 4.16.0, 4.17.0  |
 
 ### UI Steps:
 1. From OCP console, navigate to Operators > Installed Operators > IBM Cloud Pak foundational services
