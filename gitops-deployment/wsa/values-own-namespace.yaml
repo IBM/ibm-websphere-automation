@@ -8,7 +8,7 @@ catalog:
 
 subscription:
   wsaOperatorNamespace: websphere-automation
-  channel: v1.12
+  channel: v1.13
   installPlanApproval: Automatic
   wsaInstanceNamespace: websphere-automation
 
