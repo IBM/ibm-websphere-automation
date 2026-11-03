@@ -6,6 +6,20 @@ catalog:
   displayName: IBM operator Catalog
   image: icr.io/cpopen/ibm-operator-catalog
 
+cpfsCatalog:
+  enabled: true
+  name: ibm-cpfs-catalog
+  displayName: ibm-cpfs-catalog
+  image: icr.io/cpopen/ibm-common-service-catalog:4.19.2
+  syncWave: "5"
+
+pgCatalog:
+  enabled: true
+  name: ibm-pg-operator-catalog
+  displayName: ibm-pg-operator-catalog
+  image: icr.io/cpopen/ibm-pg-operator-catalog:v28.3.2
+  syncWave: "5" 
+
 subscription:
   wsaOperatorNamespace: ''
   channel: v1.13

@@ -444,6 +444,7 @@ CPFS version upgrades are not handled by WSA's helm charts and will need to be h
 | v1.12.0                          | 4.15.0, 4.16.0, 4.17.0  |
 | v1.12.1                          | 4.15.0, 4.16.0, 4.17.0  |
 | v1.13.0                          | 4.17.0, 4.18.0, 4.18.1  |
+| v1.13.1                          | 4.17.0 - 4.19.2         |
 
 ### UI Steps:
 1. From OCP console, navigate to Operators > Installed Operators > IBM Cloud Pak foundational services
@@ -461,7 +462,7 @@ CPFS version upgrades are not handled by WSA's helm charts and will need to be h
     ```
 4. Patch the Subscription to move to the desired update channel
     ```bash
-    oc patch subscription ibm-common-service-operator-v4.xx-websphere-automation-catalog-openshift-marketplace -n websphere-automation --patch '{"spec":{"channel":"v4.15"}}' --type=merge
+    oc patch subscription ibm-common-service-operator-v4.xx-ibm-operator-catalog-openshift-marketplace -n websphere-automation --patch '{"spec":{"channel":"v4.19","source":"ibm-cpfs-catalog"}}' --type=merge
     ```
 
 ## Known Limitations
