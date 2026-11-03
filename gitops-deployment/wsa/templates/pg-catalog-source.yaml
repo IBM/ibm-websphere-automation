@@ -1,0 +1,19 @@
+{{- if .Values.pgCatalog.enabled }}
+{{- $existing := lookup "operators.coreos.com/v1alpha1" "CatalogSource" "openshift-marketplace" .Values.pgCatalog.name }}
+{{- if not $existing }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: {{ .Values.pgCatalog.name }}
+  namespace: openshift-marketplace
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.pgCatalog.syncWave | quote }}
+spec:
+  displayName: {{ .Values.pgCatalog.displayName }}
+  publisher: IBM
+  sourceType: grpc
+  image: {{ .Values.pgCatalog.image }}
+  grpcPodConfig:
+    securityContextConfig: restricted
+{{- end }}
+{{- end }}

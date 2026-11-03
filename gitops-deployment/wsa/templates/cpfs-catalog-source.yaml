@@ -1,0 +1,19 @@
+{{- if .Values.cpfsCatalog.enabled }}
+{{- $existing := lookup "operators.coreos.com/v1alpha1" "CatalogSource" "openshift-marketplace" .Values.cpfsCatalog.name }}
+{{- if not $existing }}
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: {{ .Values.cpfsCatalog.name }}
+  namespace: openshift-marketplace
+  annotations:
+    argocd.argoproj.io/sync-wave: {{ .Values.cpfsCatalog.syncWave | quote }}
+spec:
+  displayName: {{ .Values.cpfsCatalog.displayName }}
+  publisher: IBM
+  sourceType: grpc
+  image: {{ .Values.cpfsCatalog.image }}
+  grpcPodConfig:
+    securityContextConfig: restricted
+{{- end }}
+{{- end }}
